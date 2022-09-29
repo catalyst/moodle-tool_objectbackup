@@ -113,6 +113,31 @@ class manager extends \tool_objectfs\local\manager {
         return false;
     }
 
+   /**
+     * Returns the list of installed and available filesystems.
+     *
+     * @return array
+     * @throws \coding_exception
+     */
+    public static function get_available_fs_list() {
+        $result[''] = get_string('pleaseselect', OBJECTFS_PLUGIN_NAME);
+
+        // $filesystems['\tool_objectbackup\local\store\azure\file_system'] = 'azure_file_system';
+        // $filesystems['\tool_objectbackup\local\store\digitalocean\file_system'] = 'digitalocean_file_system';
+        $filesystems['\tool_objectbackup\local\store\s3\file_system'] = '\tool_objectbackup\local\store\s3\file_system';
+        $filesystems['\tool_objectbackup\local\store\swift\file_system'] = '\tool_objectbackup\local\store\swift\file_system';
+
+        foreach ($filesystems as $filesystem) {
+            $clientclass = self::get_client_classname_from_fs($filesystem);
+            $client = new $clientclass(null);
+
+            if ($client && $client->get_availability()) {
+                $result[$filesystem] = $filesystem;
+            }
+        }
+        return $result;
+    }
+
     /**
      * Returns client classname for given filesystem.
      *
@@ -120,7 +145,6 @@ class manager extends \tool_objectfs\local\manager {
      * @return string
      */
     public static function get_client_classname_from_fs($filesystem) {
-        $clientclass = str_replace('_file_system', '', $filesystem);
-        return str_replace('tool_objectfs\\', 'tool_objectbackup\\local\\store\\', $clientclass.'\\client');
+        return str_replace('file_system', 'client', $filesystem);
     }
 }

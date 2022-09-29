@@ -45,8 +45,8 @@ class push_objects_to_storage extends \core\task\scheduled_task {
         global $DB;
 
         $config = \tool_objectbackup\local\manager::get_config();
-        //$fs = new $config->filesystem(); // TODO: tidy up class access and allow selecting different file system classes.
-        $fs = new \tool_objectbackup\local\store\swift\file_system;
+        $fs = new $config->filesystem();
+
         $maxfiles = 100; // TODO: Make this a setting.
         $now = time();
         $sql = "SELECT *
