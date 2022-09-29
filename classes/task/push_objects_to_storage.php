@@ -49,7 +49,7 @@ class push_objects_to_storage extends \core\task\scheduled_task {
 
         $maxfiles = 100; // TODO: Make this a setting.
         $now = time();
-        $sql = "SELECT *
+        $sql = "SELECT f.*
                   FROM {files} f
                   LEFT JOIN {tool_objectbackup} b on b.contenthash = f.contenthash
                   WHERE b.id is null";
