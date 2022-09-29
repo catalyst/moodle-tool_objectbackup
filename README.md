@@ -1,6 +1,6 @@
 # Objectfs backups #
 
-TODO Describe the plugin shortly here.
+Backups of your moodledata should be stored in a separate location from your moodledata, historically this has often meant storing data on physical locally hosted media. If you use a cloud platform for your object storage and it has a system failure, you may lose access to all your data. This plugin allows you to specify an alternate location to store a backup copy of your moodledata files and controls around when to delete the files after they are no longer used in your site.
 
 TODO Provide more detailed description here.
 
