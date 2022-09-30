@@ -15,22 +15,27 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * File system for Openstack Object Storage
+ * object_file_system abstract class.
  *
- * @package    tool_objectbackup
- * @author     Dan Marsden
- * @copyright  Catalyst IT
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * Remote object storage providers extent this class.
+ * At minimum you need to implement get_remote_client.
+ *
+ * @package   tool_objectbackup
+ * @author    Dan Marsden
+ * @copyright Catalyst IT
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace tool_objectbackup\local\store\swift;
+namespace tool_objectbackup\local\store\s3;
 
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/admin/tool/objectfs/lib.php');
 
-class file_system extends \tool_objectfs\local\store\swift\file_system {
-
+class file_system extends \tool_objectfs\local\store\s3\file_system {
+    /**
+     * Custom construct function to load objectbackup config instead of objectfs.
+     */
     public function __construct() {
         global $CFG;
         parent::__construct(); // Setup filedir.

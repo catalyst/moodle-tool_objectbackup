@@ -113,7 +113,7 @@ class manager extends \tool_objectfs\local\manager {
         return false;
     }
 
-   /**
+    /**
      * Returns the list of installed and available filesystems.
      *
      * @return array
