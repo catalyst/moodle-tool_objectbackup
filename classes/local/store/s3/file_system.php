@@ -31,6 +31,7 @@ namespace tool_objectbackup\local\store\s3;
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/admin/tool/objectfs/lib.php');
+require_once($CFG->dirroot . '/admin/tool/objectbackup/locallib.php');
 
 class file_system extends \tool_objectfs\local\store\s3\file_system {
     /**
@@ -44,5 +45,32 @@ class file_system extends \tool_objectfs\local\store\s3\file_system {
 
         $this->externalclient = $this->initialise_external_client($config);
         $this->externalclient->register_stream_wrapper();
+    }
+    /**
+     * Allows the file to be encrypted and passed to external storage.
+     *
+     * @param [type] $contenthash
+     * @return void
+     */
+    public function copy_and_encrypt_from_local_to_external($contenthash) {
+        $localpath = $this->get_local_path_from_hash($contenthash);
+
+        $tempfile = make_request_directory() . '/' . $contenthash;
+        // Create encrypted temp file and store.
+        $encryptionkey = \ParagonIE\Halite\KeyFactory::importEncryptionKey(tool_objectbackup_get_encryption_key());
+
+        \ParagonIE\Halite\File::encrypt($localpath, $tempfile, $encryptionkey);
+
+        try {
+            $this->get_external_client()->upload_to_s3($tempfile, $contenthash);
+            unlink($tempfile);
+            return true;
+        } catch (\Exception $e) {
+            $this->get_logger()->error_log(
+                'ERROR: copy ' . $tempfile . ' to ' . $this->get_external_path_from_hash($contenthash) . ': ' . $e->getMessage()
+            );
+            unlink($tempfile);
+            return false;
+        }
     }
 }
