@@ -4,7 +4,6 @@ namespace ParagonIE\Halite\Asymmetric;
 use ParagonIE\Halite\Alerts\CannotPerformOperation;
 use ParagonIE\Halite\Key;
 use ParagonIE\HiddenString\HiddenString;
-use TypeError;
 
 /**
  * Class SecretKey
@@ -16,30 +15,25 @@ use TypeError;
  */
 class SecretKey extends Key
 {
-    protected ?string $cachedPublicKey = null;
-
     /**
      * SecretKey constructor.
      * @param HiddenString $keyMaterial - The actual key data
      *
-     * @throws TypeError
+     * @throws \TypeError
      */
-    public function __construct(HiddenString $keyMaterial, ?HiddenString $pk = null)
+    public function __construct(HiddenString $keyMaterial)
     {
         parent::__construct($keyMaterial);
-        if (!is_null($pk)) {
-            $this->cachedPublicKey = $pk->getString();
-        }
         $this->isAsymmetricKey = true;
     }
 
     /**
      * See the appropriate derived class.
      * @throws CannotPerformOperation
-     * @return PublicKey
+     * @return mixed
      * @codeCoverageIgnore
      */
-    public function derivePublicKey(): PublicKey
+    public function derivePublicKey()
     {
         throw new CannotPerformOperation(
             'This is not implemented in the base class'

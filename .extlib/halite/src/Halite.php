@@ -2,7 +2,6 @@
 declare(strict_types=1);
 namespace ParagonIE\Halite;
 
-use Error;
 use ParagonIE\ConstantTime\{
     Base32,
     Base32Hex,
@@ -11,12 +10,6 @@ use ParagonIE\ConstantTime\{
     Hex
 };
 use ParagonIE\Halite\Alerts\InvalidType;
-use const
-    SODIUM_LIBRARY_MAJOR_VERSION,
-    SODIUM_LIBRARY_VERSION;
-use function
-    extension_loaded,
-    implode;
 
 /**
  * Class Halite
@@ -43,16 +36,16 @@ use function
  */
 final class Halite
 {
-    const VERSION              = '5.0.0';
+    const VERSION              = '4.4.0';
 
-    const HALITE_VERSION_KEYS  = "\x31\x40\x05\x00";
-    const HALITE_VERSION_FILE  = "\x31\x41\x05\x00";
-    const HALITE_VERSION       = "\x31\x42\x05\x00";
+    const HALITE_VERSION_KEYS  = "\x31\x40\x04\x00";
+    const HALITE_VERSION_FILE  = "\x31\x41\x04\x00";
+    const HALITE_VERSION       = "\x31\x42\x04\x00";
 
     /* Raw bytes (decoded) of the underlying ciphertext */
     const VERSION_TAG_LEN      = 4;
-    const VERSION_PREFIX       = 'MUIFA';
-    const VERSION_OLD_PREFIX   = 'MUIEA';
+    const VERSION_PREFIX       = 'MUIEA';
+    const VERSION_OLD_PREFIX   = 'MUIDA';
 
     const ENCODE_HEX           = 'hex';
     const ENCODE_BASE32        = 'base32';
@@ -63,33 +56,31 @@ final class Halite
     /**
      * Don't allow this to be instantiated.
      *
-     * @throws Error
+     * @throws \Error
      * @codeCoverageIgnore
      */
     final private function __construct()
     {
-        throw new Error('Do not instantiate');
+        throw new \Error('Do not instantiate');
     }
 
     /**
      * Select which encoding/decoding function to use.
      *
      * @internal
-     * @param string|bool $chosen
+     * @param mixed $chosen
      * @param bool $decode
-     * @return ?callable
-     *
+     * @return callable|null
      * @throws InvalidType
-     *
      * @psalm-suppress InvalidReturnStatement
      * @psalm-suppress InvalidReturnType
      */
-    public static function chooseEncoder(string|bool $chosen, bool $decode = false)
+    public static function chooseEncoder($chosen, bool $decode = false)
     {
         if ($chosen === true) {
             return null;
         } elseif ($chosen === false) {
-            return implode(
+            return \implode(
                 '::',
                 [
                     Hex::class,
@@ -97,7 +88,7 @@ final class Halite
                 ]
             );
         } elseif ($chosen === self::ENCODE_BASE32) {
-            return implode(
+            return \implode(
                 '::',
                 [
                     Base32::class,
@@ -105,7 +96,7 @@ final class Halite
                 ]
             );
         } elseif ($chosen === self::ENCODE_BASE32HEX) {
-            return implode(
+            return \implode(
                 '::',
                 [
                     Base32Hex::class,
@@ -113,7 +104,7 @@ final class Halite
                 ]
             );
         } elseif ($chosen === self::ENCODE_BASE64) {
-            return implode(
+            return \implode(
                 '::',
                 [
                     Base64::class,
@@ -121,7 +112,7 @@ final class Halite
                 ]
             );
         } elseif ($chosen === self::ENCODE_BASE64URLSAFE) {
-            return implode(
+            return \implode(
                 '::',
                 [
                     Base64UrlSafe::class,
@@ -129,7 +120,7 @@ final class Halite
                 ]
             );
         } elseif ($chosen === self::ENCODE_HEX) {
-            return implode(
+            return \implode(
                 '::',
                 [
                     Hex::class,
@@ -152,7 +143,7 @@ final class Halite
      */
     public static function isLibsodiumSetupCorrectly(bool $echo = false): bool
     {
-        if (!extension_loaded('sodium')) {
+        if (!\extension_loaded('sodium')) {
             if ($echo) {
                 echo "You do not have the sodium extension enabled.\n";
             }
@@ -160,11 +151,11 @@ final class Halite
         }
 
         // Require libsodium 1.0.15
-        $major = SODIUM_LIBRARY_MAJOR_VERSION;
+        $major = \SODIUM_LIBRARY_MAJOR_VERSION;
         if ($major < 10) {
             if ($echo) {
                 echo 'Halite needs libsodium 1.0.15 or higher. You have: ',
-                SODIUM_LIBRARY_VERSION, "\n";
+                \SODIUM_LIBRARY_VERSION, "\n";
             }
             return false;
         }

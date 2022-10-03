@@ -3,7 +3,7 @@
     <library>
         <location>.extlib/halite</location>
         <name>Halite</name>
-        <version>5.1.0</version>
+        <version>4.8.0</version>
         <license>Mozilla Public License</license>
         <licenseversion>2.0</licenseversion>
     </library>

@@ -23,34 +23,9 @@ use ParagonIE\Halite\{
     Stream\MutableFile,
     Stream\ReadOnlyFile,
     Symmetric\AuthenticationKey,
-    Symmetric\Config as SymmetricConfig,
     Symmetric\EncryptionKey
 };
-use ParagonIE\ConstantTime\Binary;
 use ParagonIE\HiddenString\HiddenString;
-use Exception;
-use Error;
-use Throwable;
-use TypeError;
-use SodiumException;
-use const
-    SODIUM_CRYPTO_AUTH_KEYBYTES,
-    SODIUM_CRYPTO_BOX_PUBLICKEYBYTES,
-    SODIUM_CRYPTO_GENERICHASH_BYTES_MAX,
-    SODIUM_CRYPTO_SECRETBOX_KEYBYTES,
-    SODIUM_CRYPTO_STREAM_NONCEBYTES;
-use function
-    array_shift,
-    hash_equals,
-    is_string,
-    pack,
-    random_bytes,
-    sodium_crypto_generichash,
-    sodium_crypto_generichash_init,
-    sodium_crypto_generichash_update,
-    sodium_crypto_generichash_final,
-    sodium_crypto_scalarmult,
-    sodium_increment;
 
 /**
  * Class File
@@ -73,12 +48,12 @@ final class File
     /**
      * Don't allow this to be instantiated.
      *
-     * @throws Error
+     * @throws \Error
      * @codeCoverageIgnore
      */
     private function __construct()
     {
-        throw new Error('Do not instantiate');
+        throw new \Error('Do not instantiate');
     }
 
     /**
@@ -86,10 +61,10 @@ final class File
      * the entire file into memory. You may optionally supply a key to use in
      * the BLAKE2b hash.
      *
-     * @param string|ReadOnlyFile $filePath
-     * @param ?Key $key (optional; expects SignaturePublicKey or
+     * @param string|resource|ReadOnlyFile $filePath
+     * @param Key $key (optional; expects SignaturePublicKey or
      *                  AuthenticationKey)
-     * @param bool|string $encoding Which encoding scheme to use for the checksum?
+     * @param mixed $encoding Which encoding scheme to use for the checksum?
      * @return string         The checksum
      *
      * @throws CannotPerformOperation
@@ -98,13 +73,12 @@ final class File
      * @throws InvalidKey
      * @throws InvalidMessage
      * @throws InvalidType
-     * @throws SodiumException
-     * @throws TypeError
+     * @throws \TypeError
      */
     public static function checksum(
-        string|ReadonlyFile $filePath,
+        $filePath,
         Key $key = null,
-        bool|string $encoding = Halite::ENCODE_BASE64URLSAFE
+        $encoding = Halite::ENCODE_BASE64URLSAFE
     ): string {
         if ($filePath instanceof ReadOnlyFile) {
             $pos = $filePath->getPos();
@@ -118,157 +92,33 @@ final class File
             return $checksum;
         }
 
-        if (is_string($filePath)) {
+        if (\is_resource($filePath) || \is_string($filePath)) {
             $readOnly = new ReadOnlyFile($filePath);
             try {
-                return self::checksumData(
+                $checksum = self::checksumData(
                     $readOnly,
                     $key,
                     $encoding
                 );
+                return $checksum;
             } finally {
-                $readOnly->close();
+                if (isset($readOnly)) {
+                    $readOnly->close();
+                }
             }
         }
-        throw new InvalidType('Argument 1: Expected a filename');
-    }
-
-    /**
-     * @param string|ReadOnlyFile $input
-     * @param string|MutableFile $output
-     * @param EncryptionPublicKey $recipientPK
-     * @param EncryptionSecretKey $senderSK
-     * @param string|null $aad
-     * @return int
-     *
-     * @throws CannotPerformOperation
-     * @throws FileAccessDenied
-     * @throws FileError
-     * @throws FileModified
-     * @throws InvalidDigestLength
-     * @throws InvalidKey
-     * @throws InvalidMessage
-     * @throws InvalidType
-     * @throws SodiumException
-     */
-    public static function asymmetricEncrypt(
-        string|ReadOnlyFile $input,
-        string|MutableFile $output,
-        EncryptionPublicKey $recipientPK,
-        EncryptionSecretKey $senderSK,
-        ?string $aad = null
-    ): int {
-        try {
-            $key = new EncryptionKey(
-                new HiddenString(
-                    sodium_crypto_generichash(
-                        sodium_crypto_scalarmult(
-                            $senderSK->getRawKeyMaterial(),
-                            $recipientPK->getRawKeyMaterial()
-                        ) .
-                        $senderSK->derivePublicKey()->getRawKeyMaterial() .
-                        $recipientPK->getRawKeyMaterial()
-                    )
-                )
-            );
-            if ($input instanceof ReadOnlyFile) {
-                $readOnly = $input;
-            } else {
-                $readOnly = new ReadOnlyFile($input);
-            }
-            if ($output instanceof MutableFile) {
-                $mutable = $output;
-            } else {
-                $mutable = new MutableFile($output);
-            }
-            return self::encryptData(
-                $readOnly,
-                $mutable,
-                $key,
-                $aad
-            );
-        } finally {
-            if (isset($readOnly)) {
-                $readOnly->close();
-            }
-            if (isset($mutable)) {
-                $mutable->close();
-            }
-        }
-    }
-
-    /**
-     * @param string|ReadOnlyFile $input
-     * @param string|MutableFile $output
-     * @param EncryptionSecretKey $recipientSK
-     * @param EncryptionPublicKey $senderPK
-     * @param string|null $aad
-     * @return bool
-     *
-     * @throws CannotPerformOperation
-     * @throws FileAccessDenied
-     * @throws FileError
-     * @throws FileModified
-     * @throws InvalidDigestLength
-     * @throws InvalidKey
-     * @throws InvalidMessage
-     * @throws InvalidType
-     * @throws SodiumException
-     */
-    public static function asymmetricDecrypt(
-        string|ReadOnlyFile $input,
-        string|MutableFile $output,
-        EncryptionSecretKey $recipientSK,
-        EncryptionPublicKey $senderPK,
-        ?string $aad = null
-    ): bool {
-        try {
-            $key = new EncryptionKey(
-                new HiddenString(
-                    sodium_crypto_generichash(
-                        sodium_crypto_scalarmult(
-                            $recipientSK->getRawKeyMaterial(),
-                            $senderPK->getRawKeyMaterial()
-                        ) .
-                        $senderPK->getRawKeyMaterial() .
-                        $recipientSK->derivePublicKey()->getRawKeyMaterial()
-                    )
-                )
-            );
-            if ($input instanceof ReadOnlyFile) {
-                $readOnly = $input;
-            } else {
-                $readOnly = new ReadOnlyFile($input);
-            }
-            if ($output instanceof MutableFile) {
-                $mutable = $output;
-            } else {
-                $mutable = new MutableFile($output);
-            }
-            return self::decryptData(
-                $readOnly,
-                $mutable,
-                $key,
-                $aad
-            );
-        } finally {
-            if (isset($readOnly)) {
-                $readOnly->close();
-            }
-            if (isset($mutable)) {
-                $mutable->close();
-            }
-        }
+        throw new InvalidType(
+            'Argument 1: Expected a filename or resource'
+        );
     }
 
     /**
      * Encrypt a file using symmetric authenticated encryption.
      *
-     * @param string|ReadOnlyFile $input Input file
-     * @param string|MutableFile $output Output file
-     * @param EncryptionKey $key         Symmetric encryption key
-     * @param string|null $aad           Additional authenticated data
-     * @return int                       Number of bytes written
+     * @param string|resource|ReadOnlyFile $input Input file
+     * @param string|resource|MutableFile $output Output file
+     * @param EncryptionKey $key                  Symmetric encryption key
+     * @return int                                Number of bytes written
      *
      * @throws CannotPerformOperation
      * @throws FileAccessDenied
@@ -278,49 +128,56 @@ final class File
      * @throws InvalidKey
      * @throws InvalidMessage
      * @throws InvalidType
-     * @throws SodiumException
+     * @throws \TypeError
      */
     public static function encrypt(
-        string|ReadOnlyFile $input,
-        string|MutableFile $output,
-        EncryptionKey $key,
-        ?string $aad = null
+        $input,
+        $output,
+        EncryptionKey $key
     ): int {
-        try {
-            if ($input instanceof ReadOnlyFile) {
-                $readOnly = $input;
-            } else {
-                $readOnly = new ReadOnlyFile($input);
-            }
-            if ($output instanceof MutableFile) {
-                $mutable = $output;
-            } else {
-                $mutable = new MutableFile($output);
-            }
-            return self::encryptData(
-                $readOnly,
-                $mutable,
-                $key,
-                $aad
-            );
-        } finally {
-            if (isset($readOnly)) {
-                $readOnly->close();
-            }
-            if (isset($mutable)) {
-                $mutable->close();
+        if (
+            (\is_resource($input) || \is_string($input) || ($input instanceof ReadOnlyFile))
+                &&
+            (\is_resource($output) || \is_string($output) || ($output instanceof MutableFile))
+        ) {
+            try {
+                if ($input instanceof ReadOnlyFile) {
+                    $readOnly = $input;
+                } else {
+                    $readOnly = new ReadOnlyFile($input);
+                }
+                if ($output instanceof MutableFile) {
+                    $mutable = $output;
+                } else {
+                    $mutable = new MutableFile($output);
+                }
+                $data = self::encryptData(
+                    $readOnly,
+                    $mutable,
+                    $key
+                );
+                return $data;
+            } finally {
+                if (isset($readOnly)) {
+                    $readOnly->close();
+                }
+                if (isset($mutable)) {
+                    $mutable->close();
+                }
             }
         }
+        throw new InvalidType(
+            'Argument 1: Expected a filename or resource'
+        );
     }
 
     /**
      * Decrypt a file using symmetric-key authenticated encryption.
      *
-     * @param string|ReadOnlyFile $input Input file
-     * @param string|MutableFile $output Output file
-     * @param EncryptionKey $key         Symmetric encryption key
-     * @param string|null $aad           Additional authenticated data
-     * @return bool                      TRUE if successful
+     * @param string|resource|ReadOnlyFile $input Input file
+     * @param string|resource|MutableFile $output Output file
+     * @param EncryptionKey $key                  Symmetric encryption key
+     * @return bool                               TRUE if successful
      *
      * @throws CannotPerformOperation
      * @throws FileAccessDenied
@@ -330,49 +187,56 @@ final class File
      * @throws InvalidKey
      * @throws InvalidMessage
      * @throws InvalidType
-     * @throws SodiumException
+     * @throws \TypeError
      */
     public static function decrypt(
-        string|ReadOnlyFile $input,
-        string|MutableFile $output,
-        EncryptionKey $key,
-        ?string $aad = null
+        $input,
+        $output,
+        EncryptionKey $key
     ): bool {
-        try {
-            if ($input instanceof ReadOnlyFile) {
-                $readOnly = $input;
-            } else {
-                $readOnly = new ReadOnlyFile($input);
-            }
-            if ($output instanceof MutableFile) {
-                $mutable = $output;
-            } else {
-                $mutable = new MutableFile($output);
-            }
-            return self::decryptData(
-                $readOnly,
-                $mutable,
-                $key,
-                $aad
-            );
-        } finally {
-            if (isset($readOnly)) {
-                $readOnly->close();
-            }
-            if (isset($mutable)) {
-                $mutable->close();
+        if (
+            (\is_resource($input) || \is_string($input) || ($input instanceof ReadOnlyFile))
+                &&
+            (\is_resource($output) || \is_string($output) || ($output instanceof MutableFile))
+        ) {
+            try {
+                if ($input instanceof ReadOnlyFile) {
+                    $readOnly = $input;
+                } else {
+                    $readOnly = new ReadOnlyFile($input);
+                }
+                if ($output instanceof MutableFile) {
+                    $mutable = $output;
+                } else {
+                    $mutable = new MutableFile($output);
+                }
+                $data = self::decryptData(
+                    $readOnly,
+                    $mutable,
+                    $key
+                );
+                return $data;
+            } finally {
+                if (isset($readOnly)) {
+                    $readOnly->close();
+                }
+                if (isset($mutable)) {
+                    $mutable->close();
+                }
             }
         }
+        throw new InvalidType(
+            'Strings or file handles expected'
+        );
     }
 
     /**
      * Encrypt a file using anonymous public-key encryption (with ciphertext
      * authentication).
      *
-     * @param string|ReadOnlyFile $input     Input file
-     * @param string|MutableFile $output     Output file
-     * @param EncryptionPublicKey $publicKey Recipient's encryption public key
-     * @param string|null $aad               Additional authenticated data
+     * @param string|resource|ReadOnlyFile $input Input file
+     * @param string|resource|MutableFile $output Output file
+     * @param EncryptionPublicKey $publicKey      Recipient's encryption public key
      * @return int
      *
      * @throws CannotPerformOperation
@@ -381,51 +245,58 @@ final class File
      * @throws InvalidDigestLength
      * @throws InvalidMessage
      * @throws InvalidType
-     * @throws Exception
-     * @throws TypeError
+     * @throws \Exception
+     * @throws \TypeError
      */
     public static function seal(
-        string|ReadOnlyFile $input,
-        string|MutableFile $output,
-        EncryptionPublicKey $publicKey,
-        ?string $aad = null
+        $input,
+        $output,
+        EncryptionPublicKey $publicKey
     ): int {
-        try {
-            if ($input instanceof ReadOnlyFile) {
-                $readOnly = $input;
-            } else {
-                $readOnly = new ReadOnlyFile($input);
-            }
-            if ($output instanceof MutableFile) {
-                $mutable = $output;
-            } else {
-                $mutable = new MutableFile($output);
-            }
-            return self::sealData(
-                $readOnly,
-                $mutable,
-                $publicKey,
-                $aad
-            );
-        } finally {
-            if (isset($readOnly)) {
-                $readOnly->close();
-            }
-            if (isset($mutable)) {
-                $mutable->close();
+        if (
+            (\is_resource($input) || \is_string($input) || ($input instanceof ReadOnlyFile))
+                &&
+            (\is_resource($output) || \is_string($output) || ($output instanceof MutableFile))
+        ) {
+            try {
+                if ($input instanceof ReadOnlyFile) {
+                    $readOnly = $input;
+                } else {
+                    $readOnly = new ReadOnlyFile($input);
+                }
+                if ($output instanceof MutableFile) {
+                    $mutable = $output;
+                } else {
+                    $mutable = new MutableFile($output);
+                }
+                $data = self::sealData(
+                    $readOnly,
+                    $mutable,
+                    $publicKey
+                );
+                return $data;
+            } finally {
+                if (isset($readOnly)) {
+                    $readOnly->close();
+                }
+                if (isset($mutable)) {
+                    $mutable->close();
+                }
             }
         }
+        throw new InvalidType(
+            'Argument 1: Expected a filename or resource'
+        );
     }
 
     /**
      * Decrypt a file using anonymous public-key encryption. Ciphertext
      * integrity is still assured thanks to the Encrypt-then-MAC construction.
      *
-     * @param string|ReadOnlyFile $input     Input file
-     * @param string|MutableFile $output     Output file
-     * @param EncryptionSecretKey $secretKey Recipient's encryption secret key
-     * @param string|null $aad               Additional authenticated data
-     * @return bool                          TRUE on success
+     * @param string|resource|ReadOnlyFile $input Input file
+     * @param string|resource|MutableFile $output Output file
+     * @param EncryptionSecretKey $secretKey      Recipient's encryption secret key
+     * @return bool                               TRUE on success
      *
      * @throws CannotPerformOperation
      * @throws FileAccessDenied
@@ -435,40 +306,47 @@ final class File
      * @throws InvalidKey
      * @throws InvalidMessage
      * @throws InvalidType
-     * @throws SodiumException
-     * @throws TypeError
+     * @throws \TypeError
      */
     public static function unseal(
-        string|ReadOnlyFile $input,
-        string|MutableFile $output,
-        EncryptionSecretKey $secretKey,
-        ?string $aad = null
+        $input,
+        $output,
+        EncryptionSecretKey $secretKey
     ): bool {
-        try {
-            if ($input instanceof ReadOnlyFile) {
-                $readOnly = $input;
-            } else {
-                $readOnly = new ReadOnlyFile($input);
-            }
-            if ($output instanceof MutableFile) {
-                $mutable = $output;
-            } else {
-                $mutable = new MutableFile($output);
-            }
-            return self::unsealData(
-                $readOnly,
-                $mutable,
-                $secretKey,
-                $aad
-            );
-        } finally {
-            if (isset($readOnly)) {
-                $readOnly->close();
-            }
-            if (isset($mutable)) {
-                $mutable->close();
+        if (
+            (\is_resource($input) || \is_string($input) || ($input instanceof ReadOnlyFile))
+                &&
+            (\is_resource($output) || \is_string($output) || ($output instanceof MutableFile))
+        ) {
+            try {
+                if ($input instanceof ReadOnlyFile) {
+                    $readOnly = $input;
+                } else {
+                    $readOnly = new ReadOnlyFile($input);
+                }
+                if ($output instanceof MutableFile) {
+                    $mutable = $output;
+                } else {
+                    $mutable = new MutableFile($output);
+                }
+                $data = self::unsealData(
+                    $readOnly,
+                    $mutable,
+                    $secretKey
+                );
+                return $data;
+            } finally {
+                if (isset($readOnly)) {
+                    $readOnly->close();
+                }
+                if (isset($mutable)) {
+                    $mutable->close();
+                }
             }
         }
+        throw new InvalidType(
+            'Argument 1: Expected a filename or resource'
+        );
     }
 
     /**
@@ -479,9 +357,9 @@ final class File
      *    Ed25519 public key used as a BLAKE2b key.
      * 2. Sign the checksum with Ed25519, using the corresponding public key.
      *
-     * @param string|ReadOnlyFile $filename File name or ReadOnlyFile object
+     * @param string|resource|ReadOnlyFile $filename     File name or file handle
      * @param SignatureSecretKey $secretKey Secret key for digital signatures
-     * @param string|bool $encoding         Which encoding scheme to use for the signature?
+     * @param mixed $encoding               Which encoding scheme to use for the signature?
      * @return string                       Detached signature for the file
      *
      * @throws CannotPerformOperation
@@ -490,12 +368,12 @@ final class File
      * @throws InvalidKey
      * @throws InvalidMessage
      * @throws InvalidType
-     * @throws TypeError
+     * @throws \TypeError
      */
     public static function sign(
-        string|ReadOnlyFile $filename,
+        $filename,
         SignatureSecretKey $secretKey,
-        string|bool $encoding = Halite::ENCODE_BASE64URLSAFE
+        $encoding = Halite::ENCODE_BASE64URLSAFE
     ): string {
         if ($filename instanceof ReadOnlyFile) {
             $pos = $filename->getPos();
@@ -507,30 +385,36 @@ final class File
             );
             $filename->reset($pos);
             return $signature;
-        } else {
+        }
+        if (\is_resource($filename) || \is_string($filename)) {
             $readOnly = new ReadOnlyFile($filename);
             try {
-                return self::signData(
+                $signature = self::signData(
                     $readOnly,
                     $secretKey,
                     $encoding
                 );
+                return $signature;
             } finally {
-                $readOnly->close();
+                if (isset($readOnly)) {
+                    $readOnly->close();
+                }
             }
         }
+        throw new InvalidType(
+            'Argument 1: Expected a filename or resource'
+        );
     }
 
     /**
      * Verify a digital signature for a file.
      *
-     * @param string|ReadOnlyFile $filename File name or ReadOnlyFile object
+     * @param string|resource|ReadOnlyFile $filename     File name or file handle
      * @param SignaturePublicKey $publicKey Other party's signature public key
      * @param string $signature             The signature we received
-     * @param string|bool $encoding         Which encoding scheme to use for the signature?
+     * @param mixed $encoding               Which encoding scheme to use for the signature?
      *
      * @return bool
-     *
      * @throws CannotPerformOperation
      * @throws FileAccessDenied
      * @throws FileError
@@ -538,14 +422,13 @@ final class File
      * @throws InvalidMessage
      * @throws InvalidSignature
      * @throws InvalidType
-     * @throws SodiumException
-     * @throws TypeError
+     * @throws \TypeError
      */
     public static function verify(
-        string|ReadOnlyFile $filename,
+        $filename,
         SignaturePublicKey $publicKey,
         string $signature,
-        string|bool $encoding = Halite::ENCODE_BASE64URLSAFE
+        $encoding = Halite::ENCODE_BASE64URLSAFE
     ): bool {
         if ($filename instanceof ReadOnlyFile) {
             $pos = $filename->getPos();
@@ -558,28 +441,34 @@ final class File
             );
             $filename->reset($pos);
             return $verified;
-        } else {
+        }
+        if (\is_resource($filename) || \is_string($filename)) {
             $readOnly = new ReadOnlyFile($filename);
             try {
-                return self::verifyData(
+                $verified = self::verifyData(
                     $readOnly,
                     $publicKey,
                     $signature,
                     $encoding
                 );
+                return $verified;
             } finally {
-                $readOnly->close();
+                if (isset($readOnly)) {
+                    $readOnly->close();
+                }
             }
         }
+        throw new InvalidType(
+            'Argument 1: Expected a filename or resource'
+        );
     }
 
     /**
      * Calculate the BLAKE2b checksum of the contents of a file
      *
      * @param StreamInterface $fileStream
-     * @param ?Key $key
-     * @param string|bool $encoding Which encoding scheme to use for the checksum?
-     *
+     * @param Key $key
+     * @param mixed $encoding Which encoding scheme to use for the checksum?
      * @return string
      *
      * @throws CannotPerformOperation
@@ -588,13 +477,13 @@ final class File
      * @throws InvalidKey
      * @throws InvalidMessage
      * @throws InvalidType
-     * @throws TypeError
-     * @throws SodiumException
+     * @throws \TypeError
+     * @throws \SodiumException
      */
     protected static function checksumData(
         StreamInterface $fileStream,
         Key $key = null,
-        string|bool $encoding = Halite::ENCODE_BASE64URLSAFE
+        $encoding = Halite::ENCODE_BASE64URLSAFE
     ): string {
         $config = self::getConfig(
             Halite::HALITE_VERSION_FILE,
@@ -604,13 +493,13 @@ final class File
         // 1. Initialize the hash context
         if ($key instanceof AuthenticationKey) {
             // AuthenticationKey is for HMAC, but we can use it for keyed hashes too
-            $state = sodium_crypto_generichash_init(
+            $state = \sodium_crypto_generichash_init(
                 $key->getRawKeyMaterial(),
                 (int) $config->HASH_LEN
             );
         } elseif($config->CHECKSUM_PUBKEY && ($key instanceof SignaturePublicKey)) {
             // In version 2, we use the public key as a hash key
-            $state = sodium_crypto_generichash_init(
+            $state = \sodium_crypto_generichash_init(
                 $key->getRawKeyMaterial(),
                 (int) $config->HASH_LEN
             );
@@ -621,7 +510,7 @@ final class File
                 'Argument 2: Expected an instance of AuthenticationKey or SignaturePublicKey'
             );
         } else {
-            $state = sodium_crypto_generichash_init(
+            $state = \sodium_crypto_generichash_init(
                 '',
                 (int) $config->HASH_LEN
             );
@@ -639,14 +528,14 @@ final class File
                 // @codeCoverageIgnoreEnd
             }
             $read = $fileStream->readBytes($amount_to_read);
-            sodium_crypto_generichash_update($state, $read);
+            \sodium_crypto_generichash_update($state, $read);
         }
 
         // 3. Do we want a raw checksum?
         $encoder = Halite::chooseEncoder($encoding);
         if ($encoder) {
             return (string) $encoder(
-                sodium_crypto_generichash_final(
+                \sodium_crypto_generichash_final(
                     // @codeCoverageIgnoreStart
                     $state,
                     // @codeCoverageIgnoreEnd
@@ -654,7 +543,7 @@ final class File
                 )
             );
         }
-        return (string) sodium_crypto_generichash_final(
+        return (string) \sodium_crypto_generichash_final(
             // @codeCoverageIgnoreStart
             $state,
             // @codeCoverageIgnoreEnd
@@ -666,8 +555,6 @@ final class File
      * @param ReadOnlyFile $input
      * @param MutableFile $output
      * @param EncryptionKey $key
-     * @param string|null $aad    Additional authenticated data
-     *
      * @return int
      *
      * @throws CannotPerformOperation
@@ -678,30 +565,28 @@ final class File
      * @throws InvalidKey
      * @throws InvalidMessage
      * @throws InvalidType
-     * @throws TypeError
-     * @throws SodiumException
+     * @throws \TypeError
+     * @throws \SodiumException
      */
     protected static function encryptData(
         ReadOnlyFile $input,
         MutableFile $output,
-        EncryptionKey $key,
-        ?string $aad = null
+        EncryptionKey $key
     ): int {
-        /** @var SymmetricConfig $config */
         $config = self::getConfig(Halite::HALITE_VERSION_FILE, 'encrypt');
 
         // Generate a nonce and HKDF salt
         // @codeCoverageIgnoreStart
         try {
-            $firstNonce = random_bytes((int) $config->NONCE_BYTES);
-            $hkdfSalt = random_bytes((int) $config->HKDF_SALT_LEN);
-        } catch (Throwable $ex) {
+            $firstNonce = \random_bytes((int) $config->NONCE_BYTES);
+            $hkdfSalt = \random_bytes((int) $config->HKDF_SALT_LEN);
+        } catch (\Throwable $ex) {
             throw new CannotPerformOperation($ex->getMessage());
         }
         // @codeCoverageIgnoreEnd
 
         // Let's split our key
-        list ($encKey, $authKey) = Util::splitKeys($key, $hkdfSalt, $config);
+        list ($encKey, $authKey) = self::splitKeys($key, $hkdfSalt, $config);
 
         // Write the header
         $output->writeBytes(
@@ -710,7 +595,7 @@ final class File
         );
         $output->writeBytes(
             $firstNonce,
-            SODIUM_CRYPTO_STREAM_NONCEBYTES
+            \SODIUM_CRYPTO_STREAM_NONCEBYTES
         );
         $output->writeBytes(
             $hkdfSalt,
@@ -718,33 +603,11 @@ final class File
         );
 
         // VERSION 2+ uses BMAC
-        $mac = sodium_crypto_generichash_init($authKey);
-        // Number of pieces that go into MAC (header, first nonce, salt, ciphertext) -> 4
-        if ($config->USE_PAE) {
-            // Number of pieces:
-            sodium_crypto_generichash_update($mac, pack('P', is_null($aad) ? 4 : 5));
-
-            // Length followed by piece:
-            sodium_crypto_generichash_update($mac, pack('P', Halite::VERSION_TAG_LEN));
-            sodium_crypto_generichash_update($mac, Halite::HALITE_VERSION_FILE);
-            sodium_crypto_generichash_update($mac, pack('P', SODIUM_CRYPTO_STREAM_NONCEBYTES));
-            sodium_crypto_generichash_update($mac, $firstNonce);
-            sodium_crypto_generichash_update($mac, pack('P', $config->HKDF_SALT_LEN));
-            sodium_crypto_generichash_update($mac, $hkdfSalt);
-            if (!is_null($aad)) {
-                sodium_crypto_generichash_update($mac, pack('P', Binary::safeStrlen($aad)));
-                sodium_crypto_generichash_update($mac, pack('P', $aad));
-            }
-            sodium_crypto_generichash_update($mac, pack('P', $input->remainingBytes()));
-        } else {
-            // Legacy version: No PAE
-            sodium_crypto_generichash_update($mac, Halite::HALITE_VERSION_FILE);
-            sodium_crypto_generichash_update($mac, $firstNonce);
-            sodium_crypto_generichash_update($mac, $hkdfSalt);
-        }
-        if (!is_string($mac)) {
-            throw new CannotPerformOperation('Internal error with BLAKE2b implementation');
-        }
+        $mac = \sodium_crypto_generichash_init($authKey);
+        \sodium_crypto_generichash_update($mac, Halite::HALITE_VERSION_FILE);
+        \sodium_crypto_generichash_update($mac, $firstNonce);
+        \sodium_crypto_generichash_update($mac, $hkdfSalt);
+        /** @var string $mac */
 
         Util::memzero($authKey);
         Util::memzero($hkdfSalt);
@@ -755,7 +618,7 @@ final class File
             new EncryptionKey(
                 new HiddenString($encKey)
             ),
-            $firstNonce,
+            (string) $firstNonce,
             (string) $mac,
             $config
         );
@@ -767,7 +630,6 @@ final class File
      * @param ReadOnlyFile $input
      * @param MutableFile $output
      * @param EncryptionKey $key
-     * @param string|null $aad    Additional authenticated data
      * @return bool
      *
      * @throws CannotPerformOperation
@@ -778,13 +640,12 @@ final class File
      * @throws InvalidKey
      * @throws InvalidMessage
      * @throws InvalidType
-     * @throws SodiumException
+     * @throws \SodiumException
      */
     protected static function decryptData(
         ReadOnlyFile $input,
         MutableFile $output,
-        EncryptionKey $key,
-        ?string $aad = null
+        EncryptionKey $key
     ): bool {
         // Rewind
         $input->reset(0);
@@ -799,7 +660,6 @@ final class File
         $header = $input->readBytes(Halite::VERSION_TAG_LEN);
 
         // Load the config
-        /** @var SymmetricConfig $config */
         $config = self::getConfig($header, 'encrypt');
 
         // Is this shorter than an encrypted empty string?
@@ -814,39 +674,15 @@ final class File
         $hkdfSalt = $input->readBytes((int) $config->HKDF_SALT_LEN);
 
         // Split our keys, begin the HMAC instance
-        list ($encKey, $authKey) = Util::splitKeys($key, $hkdfSalt, $config);
+        list ($encKey, $authKey) = self::splitKeys($key, $hkdfSalt, $config);
 
         // VERSION 2+ uses BMAC
-        $mac = sodium_crypto_generichash_init($authKey);
-        if ($config->USE_PAE) {
-            // Number of pieces:
-            sodium_crypto_generichash_update($mac, pack('P', is_null($aad) ? 4 : 5));
+        $mac = \sodium_crypto_generichash_init($authKey);
+        \sodium_crypto_generichash_update($mac, $header);
+        \sodium_crypto_generichash_update($mac, $firstNonce);
+        \sodium_crypto_generichash_update($mac, $hkdfSalt);
+        /** @var string $mac */
 
-            // Length followed by piece:
-            sodium_crypto_generichash_update($mac, pack('P', Halite::VERSION_TAG_LEN));
-            sodium_crypto_generichash_update($mac, $header);
-            sodium_crypto_generichash_update($mac, pack('P', SODIUM_CRYPTO_STREAM_NONCEBYTES));
-            sodium_crypto_generichash_update($mac, $firstNonce);
-            sodium_crypto_generichash_update($mac, pack('P', $config->HKDF_SALT_LEN));
-            sodium_crypto_generichash_update($mac, $hkdfSalt);
-
-            if (!is_null($aad)) {
-                sodium_crypto_generichash_update($mac, pack('P', Binary::safeStrlen($aad)));
-                sodium_crypto_generichash_update($mac, pack('P', $aad));
-            }
-            sodium_crypto_generichash_update(
-                $mac,
-                pack('P', $input->remainingBytes() - ((int) $config->MAC_SIZE))
-            );
-        } else {
-            // Legacy version: No PAE
-            sodium_crypto_generichash_update($mac, $header);
-            sodium_crypto_generichash_update($mac, $firstNonce);
-            sodium_crypto_generichash_update($mac, $hkdfSalt);
-        }
-        if (!is_string($mac)) {
-            throw new CannotPerformOperation('Internal error with BLAKE2b implementation');
-        }
         $old_macs = self::streamVerify($input, Util::safeStrcpy($mac), $config);
 
         Util::memzero($authKey);
@@ -881,7 +717,6 @@ final class File
      * @param ReadOnlyFile $input
      * @param MutableFile $output
      * @param EncryptionPublicKey $publicKey
-     * @param ?string $aad
      * @return int
      *
      * @throws CannotPerformOperation
@@ -890,14 +725,13 @@ final class File
      * @throws InvalidDigestLength
      * @throws InvalidMessage
      * @throws InvalidType
-     * @throws Exception
-     * @throws TypeError
+     * @throws \Exception
+     * @throws \TypeError
      */
     protected static function sealData(
         ReadOnlyFile $input,
         MutableFile $output,
-        EncryptionPublicKey $publicKey,
-        ?string $aad = null
+        EncryptionPublicKey $publicKey
     ): int {
         // Generate a new keypair for this encryption
         $ephemeralKeyPair = KeyFactory::generateEncryptionKeyPair();
@@ -906,15 +740,10 @@ final class File
         unset($ephemeralKeyPair);
 
         // Calculate the shared secret key
-        $sharedSecretKey = AsymmetricCrypto::getSharedSecret(
-            $ephSecret,
-            $publicKey,
-            true,
-            AsymmetricCrypto::getAsymmetricConfig(Halite::HALITE_VERSION_FILE, true)
-        );
+        $sharedSecretKey = AsymmetricCrypto::getSharedSecret($ephSecret, $publicKey, true);
         // @codeCoverageIgnoreStart
         if (!($sharedSecretKey instanceof EncryptionKey)) {
-            throw new TypeError('Shared secret is the wrong key type.');
+            throw new \TypeError('Shared secret is the wrong key type.');
         }
         // @codeCoverageIgnoreEnd
 
@@ -925,21 +754,21 @@ final class File
         $config = self::getConfig(Halite::HALITE_VERSION_FILE, 'seal');
 
         // Generate a nonce as per crypto_box_seal
-        $nonce = sodium_crypto_generichash(
+        $nonce = \sodium_crypto_generichash(
             $ephPublic->getRawKeyMaterial() . $publicKey->getRawKeyMaterial(),
             '',
-            SODIUM_CRYPTO_STREAM_NONCEBYTES
+            \SODIUM_CRYPTO_STREAM_NONCEBYTES
         );
 
         // Generate a random HKDF salt
-        $hkdfSalt = random_bytes((int) $config->HKDF_SALT_LEN);
+        $hkdfSalt = \random_bytes((int) $config->HKDF_SALT_LEN);
 
         // Split the keys
         /**
          * @var string $encKey
          * @var string $authKey
          */
-        list ($encKey, $authKey) = Util::splitKeys($sharedSecretKey, $hkdfSalt, $config);
+        list ($encKey, $authKey) = self::splitKeys($sharedSecretKey, $hkdfSalt, $config);
 
         // Write the header:
         $output->writeBytes(
@@ -948,7 +777,7 @@ final class File
         );
         $output->writeBytes(
             $ephPublic->getRawKeyMaterial(),
-            SODIUM_CRYPTO_BOX_PUBLICKEYBYTES
+            \SODIUM_CRYPTO_BOX_PUBLICKEYBYTES
         );
         $output->writeBytes(
             $hkdfSalt,
@@ -956,33 +785,14 @@ final class File
         );
 
         // VERSION 2+
-        $mac = sodium_crypto_generichash_init($authKey);
-        Util::memzero($authKey);
-        if ($config->USE_PAE) {
-            // Number of pieces:
-            sodium_crypto_generichash_update($mac, pack('P', is_null($aad) ? 4 : 5));
+        $mac = \sodium_crypto_generichash_init($authKey);
 
-            // Length followed by piece:
-            sodium_crypto_generichash_update($mac, pack('P', Halite::VERSION_TAG_LEN));
-            sodium_crypto_generichash_update($mac, Halite::HALITE_VERSION_FILE);
-            sodium_crypto_generichash_update($mac, pack('P', SODIUM_CRYPTO_BOX_PUBLICKEYBYTES));
-            sodium_crypto_generichash_update($mac, $ephPublic->getRawKeyMaterial());
-            sodium_crypto_generichash_update($mac, pack('P', $config->HKDF_SALT_LEN));
-            sodium_crypto_generichash_update($mac, $hkdfSalt);
-            if (!is_null($aad)) {
-                sodium_crypto_generichash_update($mac, pack('P', Binary::safeStrlen($aad)));
-                sodium_crypto_generichash_update($mac, pack('P', $aad));
-            }
-            sodium_crypto_generichash_update($mac, pack('P', $input->remainingBytes()));
-        } else {
-            // Legacy version: No PAE
-            sodium_crypto_generichash_update($mac, Halite::HALITE_VERSION_FILE);
-            sodium_crypto_generichash_update($mac, $ephPublic->getRawKeyMaterial());
-            sodium_crypto_generichash_update($mac, $hkdfSalt);
-        }
-        if (!is_string($mac)) {
-            throw new CannotPerformOperation('Internal error with BLAKE2b implementation');
-        }
+        // We no longer need $authKey after we set up the hash context
+        Util::memzero($authKey);
+
+        \sodium_crypto_generichash_update($mac, Halite::HALITE_VERSION_FILE);
+        \sodium_crypto_generichash_update($mac, $ephPublic->getRawKeyMaterial());
+        \sodium_crypto_generichash_update($mac, $hkdfSalt);
 
         unset($ephPublic);
         Util::memzero($hkdfSalt);
@@ -1009,7 +819,6 @@ final class File
      * @param ReadOnlyFile $input
      * @param MutableFile $output
      * @param EncryptionSecretKey $secretKey
-     * @param ?string $aad
      * @return bool
      *
      * @throws CannotPerformOperation
@@ -1020,14 +829,12 @@ final class File
      * @throws InvalidKey
      * @throws InvalidMessage
      * @throws InvalidType
-     * @throws TypeError
-     * @throws SodiumException
+     * @throws \TypeError
      */
     protected static function unsealData(
         ReadOnlyFile $input,
         MutableFile $output,
-        EncryptionSecretKey $secretKey,
-        ?string $aad = null
+        EncryptionSecretKey $secretKey
     ): bool {
         $publicKey = $secretKey
             ->derivePublicKey();
@@ -1055,10 +862,10 @@ final class File
         $hkdfSalt = $input->readBytes((int) $config->HKDF_SALT_LEN);
 
         // Generate the same nonce, as per sealData()
-        $nonce = sodium_crypto_generichash(
+        $nonce = \sodium_crypto_generichash(
             $ephPublic . $publicKey->getRawKeyMaterial(),
             '',
-            SODIUM_CRYPTO_STREAM_NONCEBYTES
+            \SODIUM_CRYPTO_STREAM_NONCEBYTES
         );
 
         // Create a key object out of the public key:
@@ -1069,12 +876,11 @@ final class File
         $key = AsymmetricCrypto::getSharedSecret(
             $secretKey,
             $ephemeral,
-            true,
-            AsymmetricCrypto::getAsymmetricConfig($header, true)
+            true
         );
         // @codeCoverageIgnoreStart
         if (!($key instanceof EncryptionKey)) {
-            throw new TypeError();
+            throw new \TypeError();
         }
         // @codeCoverageIgnoreEnd
         unset($ephemeral);
@@ -1083,41 +889,17 @@ final class File
          * @var string $encKey
          * @var string $authKey
          */
-        list ($encKey, $authKey) = Util::splitKeys($key, $hkdfSalt, $config);
+        list ($encKey, $authKey) = self::splitKeys($key, $hkdfSalt, $config);
         // We no longer need the original key after we split it
         unset($key);
 
-        $mac = sodium_crypto_generichash_init($authKey);
+        $mac = \sodium_crypto_generichash_init($authKey);
 
-        if ($config->USE_PAE) {
-            // Number of pieces:
-            sodium_crypto_generichash_update($mac, pack('P', is_null($aad) ? 4 : 5));
+        \sodium_crypto_generichash_update($mac, $header);
+        \sodium_crypto_generichash_update($mac, $ephPublic);
+        \sodium_crypto_generichash_update($mac, $hkdfSalt);
 
-            // Length followed by piece:
-            sodium_crypto_generichash_update($mac, pack('P', Halite::VERSION_TAG_LEN));
-            sodium_crypto_generichash_update($mac, $header);
-            sodium_crypto_generichash_update($mac, pack('P', SODIUM_CRYPTO_BOX_PUBLICKEYBYTES));
-            sodium_crypto_generichash_update($mac, $ephPublic);
-            sodium_crypto_generichash_update($mac, pack('P', $config->HKDF_SALT_LEN));
-            sodium_crypto_generichash_update($mac, $hkdfSalt);
-            if (!is_null($aad)) {
-                sodium_crypto_generichash_update($mac, pack('P', Binary::safeStrlen($aad)));
-                sodium_crypto_generichash_update($mac, pack('P', $aad));
-            }
-            sodium_crypto_generichash_update(
-                $mac,
-                pack('P', $input->remainingBytes() - ((int) $config->MAC_SIZE))
-            );
-        } else {
-            // Legacy version: No PAE
-            sodium_crypto_generichash_update($mac, $header);
-            sodium_crypto_generichash_update($mac, $ephPublic);
-            sodium_crypto_generichash_update($mac, $hkdfSalt);
-        }
-        if (!is_string($mac)) {
-            throw new CannotPerformOperation('Internal error with BLAKE2b implementation');
-        }
-
+        /** @var string $mac */
         $oldMACs = self::streamVerify($input, Util::safeStrcpy($mac), $config);
 
         // We no longer need these:
@@ -1150,7 +932,7 @@ final class File
      *
      * @param ReadOnlyFile $input
      * @param SignatureSecretKey $secretKey
-     * @param string|bool $encoding Which encoding scheme to use for the signature?
+     * @param mixed $encoding Which encoding scheme to use for the signature?
      * @return string
      *
      * @throws CannotPerformOperation
@@ -1159,12 +941,12 @@ final class File
      * @throws InvalidKey
      * @throws InvalidMessage
      * @throws InvalidType
-     * @throws TypeError
+     * @throws \TypeError
      */
     protected static function signData(
         ReadOnlyFile $input,
         SignatureSecretKey $secretKey,
-        string|bool $encoding = Halite::ENCODE_BASE64URLSAFE
+        $encoding = Halite::ENCODE_BASE64URLSAFE
     ): string {
         $checksum = self::checksumData(
             $input,
@@ -1184,7 +966,7 @@ final class File
      * @param $input (file handle)
      * @param SignaturePublicKey $publicKey
      * @param string $signature
-     * @param string|bool $encoding Which encoding scheme to use for the signature?
+     * @param mixed $encoding Which encoding scheme to use for the signature?
      *
      * @return bool
      *
@@ -1195,14 +977,13 @@ final class File
      * @throws InvalidKey
      * @throws InvalidMessage
      * @throws InvalidType
-     * @throws SodiumException
-     * @throws TypeError
+     * @throws \TypeError
      */
     protected static function verifyData(
         ReadOnlyFile $input,
         SignaturePublicKey $publicKey,
         string $signature,
-        string|bool $encoding = Halite::ENCODE_BASE64URLSAFE
+        $encoding = Halite::ENCODE_BASE64URLSAFE
     ): bool {
         $checksum = self::checksumData($input, $publicKey, true);
         return AsymmetricCrypto::verify(
@@ -1226,25 +1007,25 @@ final class File
         string $header,
         string $mode = 'encrypt'
     ): Config {
-        if (Util::chrToInt($header[0]) !== 49 || Util::chrToInt($header[1]) !== 65) {
+        if (\ord($header[0]) !== 49 || \ord($header[1]) !== 65) {
             // @codeCoverageIgnoreStart
             throw new InvalidMessage(
                 'Invalid version tag'
             );
             // @codeCoverageIgnoreEnd
         }
-        $major = Util::chrToInt($header[2]);
-        $minor = Util::chrToInt($header[3]);
+        $major = \ord($header[2]);
+        $minor = \ord($header[3]);
         if ($mode === 'encrypt') {
-            return new SymmetricConfig(
+            return new Config(
                 self::getConfigEncrypt($major, $minor)
             );
         } elseif ($mode === 'seal') {
-            return new SymmetricConfig(
+            return new Config(
                 self::getConfigSeal($major, $minor)
             );
         } elseif ($mode === 'checksum') {
-            return new SymmetricConfig(
+            return new Config(
                 self::getConfigChecksum($major, $minor)
             );
         }
@@ -1265,32 +1046,30 @@ final class File
      */
     protected static function getConfigEncrypt(int $major, int $minor): array
     {
-        if ($major === 5) {
+
+        if ($major === 4) {
             return [
                 'SHORTEST_CIPHERTEXT_LENGTH' => 92,
                 'BUFFER' => 1048576,
-                'NONCE_BYTES' => SODIUM_CRYPTO_STREAM_NONCEBYTES,
+                'NONCE_BYTES' => \SODIUM_CRYPTO_STREAM_NONCEBYTES,
                 'HKDF_SALT_LEN' => 32,
                 'MAC_SIZE' => 32,
-                'ENC_ALGO' => 'XChaCha20',
-                'USE_PAE' => true,
-                'HKDF_USE_INFO' => true,
                 'HKDF_SBOX' => 'Halite|EncryptionKey',
                 'HKDF_AUTH' => 'AuthenticationKeyFor_|Halite'
             ];
-        } elseif ($major === 4) {
-            return [
-                'SHORTEST_CIPHERTEXT_LENGTH' => 92,
-                'BUFFER' => 1048576,
-                'NONCE_BYTES' => SODIUM_CRYPTO_STREAM_NONCEBYTES,
-                'HKDF_SALT_LEN' => 32,
-                'MAC_SIZE' => 32,
-                'ENC_ALGO' => 'XSalsa20',
-                'USE_PAE' => false,
-                'HKDF_USE_INFO' => false,
-                'HKDF_SBOX' => 'Halite|EncryptionKey',
-                'HKDF_AUTH' => 'AuthenticationKeyFor_|Halite'
-            ];
+        } elseif ($major === 3) {
+            switch ($minor) {
+                case 0:
+                    return [
+                        'SHORTEST_CIPHERTEXT_LENGTH' => 92,
+                        'BUFFER' => 1048576,
+                        'NONCE_BYTES' => \SODIUM_CRYPTO_STREAM_NONCEBYTES,
+                        'HKDF_SALT_LEN' => 32,
+                        'MAC_SIZE' => 32,
+                        'HKDF_SBOX' => 'Halite|EncryptionKey',
+                        'HKDF_AUTH' => 'AuthenticationKeyFor_|Halite'
+                    ];
+            }
         }
         // If we reach here, we've got an invalid version tag:
         // @codeCoverageIgnoreStart
@@ -1310,7 +1089,7 @@ final class File
      */
     protected static function getConfigSeal(int $major, int $minor): array
     {
-        if ($major === 5) {
+        if ($major === 4) {
             switch ($minor) {
                 case 0:
                     return [
@@ -1318,31 +1097,25 @@ final class File
                         'BUFFER' => 1048576,
                         'HKDF_SALT_LEN' => 32,
                         'MAC_SIZE' => 32,
-                        'PUBLICKEY_BYTES' => SODIUM_CRYPTO_BOX_PUBLICKEYBYTES,
-                        'ENC_ALGO' => 'XChaCha20',
-                        'USE_PAE' => true,
-                        'HKDF_USE_INFO' => true,
+                        'PUBLICKEY_BYTES' => \SODIUM_CRYPTO_BOX_PUBLICKEYBYTES,
                         'HKDF_SBOX' => 'Halite|EncryptionKey',
                         'HKDF_AUTH' => 'AuthenticationKeyFor_|Halite'
                     ];
             }
-        } elseif ($major === 4) {
-                switch ($minor) {
-                    case 0:
-                        return [
-                            'SHORTEST_CIPHERTEXT_LENGTH' => 100,
-                            'BUFFER' => 1048576,
-                            'HKDF_SALT_LEN' => 32,
-                            'MAC_SIZE' => 32,
-                            'PUBLICKEY_BYTES' => SODIUM_CRYPTO_BOX_PUBLICKEYBYTES,
-                            'ENC_ALGO' => 'XSalsa20',
-                            'USE_PAE' => false,
-                            'HKDF_USE_INFO' => false,
-                            'HKDF_SBOX' => 'Halite|EncryptionKey',
-                            'HKDF_AUTH' => 'AuthenticationKeyFor_|Halite'
-                        ];
-                }
+        } elseif ($major === 3) {
+            switch ($minor) {
+                case 0:
+                    return [
+                        'SHORTEST_CIPHERTEXT_LENGTH' => 100,
+                        'BUFFER' => 1048576,
+                        'HKDF_SALT_LEN' => 32,
+                        'MAC_SIZE' => 32,
+                        'PUBLICKEY_BYTES' => \SODIUM_CRYPTO_BOX_PUBLICKEYBYTES,
+                        'HKDF_SBOX' => 'Halite|EncryptionKey',
+                        'HKDF_AUTH' => 'AuthenticationKeyFor_|Halite'
+                    ];
             }
+        }
         // @codeCoverageIgnoreStart
         throw new InvalidMessage(
             'Invalid version tag'
@@ -1360,13 +1133,13 @@ final class File
      */
     protected static function getConfigChecksum(int $major, int $minor): array
     {
-        if ($major === 3 || $major === 4 || $major === 5) {
+        if ($major === 3 || $major === 4) {
             switch ($minor) {
                 case 0:
                     return [
                         'CHECKSUM_PUBKEY' => true,
                         'BUFFER' => 1048576,
-                        'HASH_LEN' => SODIUM_CRYPTO_GENERICHASH_BYTES_MAX
+                        'HASH_LEN' => \SODIUM_CRYPTO_GENERICHASH_BYTES_MAX
                     ];
             }
         }
@@ -1375,6 +1148,40 @@ final class File
             'Invalid version tag'
         );
         // @codeCoverageIgnoreEnd
+    }
+
+    /**
+     * Split a key using HKDF-BLAKE2b
+     *
+     * @param Key $master
+     * @param string $salt
+     * @param Config $config
+     * @return array<int, string>
+     *
+     * @throws InvalidDigestLength
+     * @throws CannotPerformOperation
+     * @throws \TypeError
+     */
+    protected static function splitKeys(
+        Key $master,
+        string $salt,
+        Config $config
+    ): array {
+        $binary = $master->getRawKeyMaterial();
+        return [
+            Util::hkdfBlake2b(
+                $binary,
+                \SODIUM_CRYPTO_SECRETBOX_KEYBYTES,
+                (string) $config->HKDF_SBOX,
+                $salt
+            ),
+            Util::hkdfBlake2b(
+                $binary,
+                \SODIUM_CRYPTO_AUTH_KEYBYTES,
+                (string) $config->HKDF_AUTH,
+                $salt
+            )
+        ];
     }
 
     /**
@@ -1393,8 +1200,8 @@ final class File
      * @throws CannotPerformOperation
      * @throws FileAccessDenied
      * @throws FileModified
-     * @throws SodiumException
-     * @throws TypeError
+     * @throws \SodiumException
+     * @throws \TypeError
      */
     private static function streamEncrypt(
         ReadOnlyFile $input,
@@ -1415,29 +1222,21 @@ final class File
                     : (int) $config->BUFFER
             );
 
-            if ($config->ENC_ALGO === 'XChaCha20') {
-                $encrypted = sodium_crypto_stream_xchacha20_xor(
-                    $read,
-                    (string)$nonce,
-                    $encKey->getRawKeyMaterial()
-                );
-            } else {
-                $encrypted = sodium_crypto_stream_xor(
-                    $read,
-                    (string)$nonce,
-                    $encKey->getRawKeyMaterial()
-                );
-            }
-            sodium_crypto_generichash_update($mac, $encrypted);
+            $encrypted = \sodium_crypto_stream_xor(
+                $read,
+                (string) $nonce,
+                $encKey->getRawKeyMaterial()
+            );
+            \sodium_crypto_generichash_update($mac, $encrypted);
             $written += $output->writeBytes($encrypted);
-            sodium_increment($nonce);
+            \sodium_increment($nonce);
         }
-        if (is_string($nonce)) {
+        if (\is_string($nonce)) {
             Util::memzero($nonce);
         }
 
         // Check that our input file was not modified before we MAC it
-        if (!hash_equals($input->getHash(), $initHash)) {
+        if (!\hash_equals($input->getHash(), $initHash)) {
             // @codeCoverageIgnoreStart
             throw new FileModified(
                 'Read-only file has been modified since it was opened for reading'
@@ -1445,7 +1244,7 @@ final class File
             // @codeCoverageIgnoreEnd
         }
         $written += $output->writeBytes(
-            sodium_crypto_generichash_final($mac, (int) $config->MAC_SIZE),
+            \sodium_crypto_generichash_final($mac, (int) $config->MAC_SIZE),
             (int) $config->MAC_SIZE
         );
         return $written;
@@ -1460,7 +1259,7 @@ final class File
      * @param string $nonce
      * @param string $mac (hash context for BLAKE2b)
      * @param Config $config
-     * @param string[] &$chunk_macs
+     * @param array &$chunk_macs
      *
      * @return bool
      *
@@ -1469,8 +1268,8 @@ final class File
      * @throws FileAccessDenied
      * @throws FileModified
      * @throws InvalidMessage
-     * @throws TypeError
-     * @throws SodiumException
+     * @throws \TypeError
+     * @throws \SodiumException
      */
     private static function streamDecrypt(
         ReadOnlyFile $input,
@@ -1502,12 +1301,10 @@ final class File
             }
 
             // Version 2+ uses a keyed BLAKE2b hash instead of HMAC
-            sodium_crypto_generichash_update($mac, $read);
-            if (!is_string($mac)) {
-                throw new CannotPerformOperation('Internal error with BLAKE2b implementation');
-            }
+            \sodium_crypto_generichash_update($mac, $read);
+            /** @var string $mac */
             $calcMAC = Util::safeStrcpy($mac);
-            $calc = sodium_crypto_generichash_final($calcMAC, (int) $config->MAC_SIZE);
+            $calc = \sodium_crypto_generichash_final($calcMAC, (int) $config->MAC_SIZE);
 
             if (empty($chunk_macs)) {
                 // @codeCoverageIgnoreStart
@@ -1517,8 +1314,9 @@ final class File
                 );
                 // @codeCoverageIgnoreEnd
             } else {
-                $chunkMAC = array_shift($chunk_macs);
-                if (!hash_equals($chunkMAC, $calc)) {
+                /** @var string $chunkMAC */
+                $chunkMAC = \array_shift($chunk_macs);
+                if (!\hash_equals($chunkMAC, $calc)) {
                     // This chunk was altered after the original MAC was verified
                     // @codeCoverageIgnoreStart
                     throw new InvalidMessage(
@@ -1529,23 +1327,15 @@ final class File
             }
 
             // This is where the decryption actually occurs:
-            if ($config->ENC_ALGO === 'XChaCha20') {
-                $decrypted = sodium_crypto_stream_xchacha20_xor(
-                    $read,
-                    (string)$nonce,
-                    $encKey->getRawKeyMaterial()
-                );
-            } else {
-                $decrypted = sodium_crypto_stream_xor(
-                    $read,
-                    (string)$nonce,
-                    $encKey->getRawKeyMaterial()
-                );
-            }
+            $decrypted = \sodium_crypto_stream_xor(
+                $read,
+                (string) $nonce,
+                $encKey->getRawKeyMaterial()
+            );
             $output->writeBytes($decrypted);
-            sodium_increment($nonce);
+            \sodium_increment($nonce);
         }
-        if (is_string($nonce)) {
+        if (\is_string($nonce)) {
             Util::memzero($nonce);
         }
         return true;
@@ -1555,21 +1345,21 @@ final class File
      * Recalculate and verify the HMAC of the input file
      *
      * @param ReadOnlyFile $input  The file we are verifying
-     * @param string $mac          (hash context)
+     * @param string $mac (hash context)
      * @param Config $config       Version-specific settings
      *
-     * @return string[]            Hashes of various chunks
+     * @return array               Hashes of various chunks
      *
      * @throws CannotPerformOperation
      * @throws FileAccessDenied
      * @throws FileModified
      * @throws InvalidMessage
-     * @throws TypeError
-     * @throws SodiumException
+     * @throws \TypeError
+     * @throws \SodiumException
      */
     private static function streamVerify(
         ReadOnlyFile $input,
-        string $mac,
+        $mac,
         Config $config
     ): array {
         $start = $input->getPos();
@@ -1584,6 +1374,7 @@ final class File
 
         $break = false;
         while (!$break && $input->getPos() < $cipher_end) {
+
             /**
              * Would a full BUFFER read put it past the end of the
              * ciphertext? If so, only return a portion of the file.
@@ -1600,13 +1391,11 @@ final class File
             /**
              * We're updating our HMAC and nothing else
              */
-            sodium_crypto_generichash_update($mac, $read);
-            if (!is_string($mac)) {
-                throw new CannotPerformOperation('Internal error with BLAKE2b implementation');
-            }
+            \sodium_crypto_generichash_update($mac, $read);
+            $mac = (string) $mac;
             // Copy the hash state then store the MAC of this chunk
             $chunkMAC = Util::safeStrcpy($mac);
-            $chunkMACs []= sodium_crypto_generichash_final(
+            $chunkMACs []= \sodium_crypto_generichash_final(
                 // @codeCoverageIgnoreStart
                 $chunkMAC,
                 // @codeCoverageIgnoreEnd
@@ -1617,7 +1406,7 @@ final class File
         /**
          * We should now have enough data to generate an identical MAC
          */
-        $finalHMAC = sodium_crypto_generichash_final(
+        $finalHMAC = \sodium_crypto_generichash_final(
             // @codeCoverageIgnoreStart
             $mac,
             // @codeCoverageIgnoreEnd
@@ -1627,7 +1416,7 @@ final class File
         /**
          * Use hash_equals() to be timing-invariant
          */
-        if (!hash_equals($finalHMAC, $stored_mac)) {
+        if (!\hash_equals($finalHMAC, $stored_mac)) {
             throw new InvalidMessage(
                 'Invalid message authentication code'
             );

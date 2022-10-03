@@ -5,12 +5,6 @@ namespace ParagonIE\Halite\Asymmetric;
 use ParagonIE\ConstantTime\Binary;
 use ParagonIE\Halite\Alerts\InvalidKey;
 use ParagonIE\HiddenString\HiddenString;
-use SodiumException;
-use TypeError;
-use const SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES;
-use function
-    sodium_crypto_sign_ed25519_pk_to_curve25519,
-    sprintf;
 
 /**
  * Class SignaturePublicKey
@@ -28,16 +22,13 @@ final class SignaturePublicKey extends PublicKey
      * @param HiddenString $keyMaterial - The actual key data
      *
      * @throws InvalidKey
-     * @throws TypeError
+     * @throws \TypeError
      */
     public function __construct(HiddenString $keyMaterial)
     {
-        if (Binary::safeStrlen($keyMaterial->getString()) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
+        if (Binary::safeStrlen($keyMaterial->getString()) !== \SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
             throw new InvalidKey(
-                sprintf(
-                    'Signature public key must be CRYPTO_SIGN_PUBLICKEYBYTES (%d) bytes long',
-                    SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES
-                )
+                'Signature public key must be CRYPTO_SIGN_PUBLICKEYBYTES bytes long'
             );
         }
         parent::__construct($keyMaterial);
@@ -48,15 +39,13 @@ final class SignaturePublicKey extends PublicKey
      * Get an encryption public key from a signing public key.
      *
      * @return EncryptionPublicKey
-     *
-     * @throws SodiumException
-     * @throws TypeError
+     * @throws \TypeError
      * @throws InvalidKey
      */
     public function getEncryptionPublicKey(): EncryptionPublicKey
     {
         $ed25519_pk = $this->getRawKeyMaterial();
-        $x25519_pk = sodium_crypto_sign_ed25519_pk_to_curve25519(
+        $x25519_pk = \sodium_crypto_sign_ed25519_pk_to_curve25519(
             $ed25519_pk
         );
         return new EncryptionPublicKey(

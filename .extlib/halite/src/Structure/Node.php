@@ -4,9 +4,6 @@ namespace ParagonIE\Halite\Structure;
 
 use ParagonIE\Halite\Alerts\CannotPerformOperation;
 use ParagonIE\Halite\Util;
-use SodiumException;
-use TypeError;
-use const SODIUM_CRYPTO_GENERICHASH_BYTES;
 
 /**
  * Class Node
@@ -24,11 +21,13 @@ use const SODIUM_CRYPTO_GENERICHASH_BYTES;
  */
 class Node
 {
-    private string $data;
+    /**
+     * @var string
+     */
+    private $data;
 
     /**
      * Node constructor.
-     *
      * @param string $data
      */
     public function __construct(string $data)
@@ -56,14 +55,12 @@ class Node
      * @param string $personalization
      *
      * @return string
-     *
      * @throws CannotPerformOperation
-     * @throws TypeError
-     * @throws SodiumException
+     * @throws \TypeError
      */
     public function getHash(
         bool $raw = false,
-        int $outputSize = SODIUM_CRYPTO_GENERICHASH_BYTES,
+        int $outputSize = \SODIUM_CRYPTO_GENERICHASH_BYTES,
         string $personalization = ''
     ): string {
         if ($raw) {
@@ -82,7 +79,6 @@ class Node
      * Nodes are immutable, but you can create one with extra data.
      *
      * @param string $concat
-     *
      * @return Node
      */
     public function getExpandedNode(string $concat): Node

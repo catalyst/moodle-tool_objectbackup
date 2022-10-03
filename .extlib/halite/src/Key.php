@@ -7,7 +7,6 @@ use ParagonIE\Halite\Alerts\{
     CannotSerializeKey
 };
 use ParagonIE\HiddenString\HiddenString;
-use TypeError;
 
 /**
  * Class Key
@@ -27,10 +26,25 @@ use TypeError;
  */
 class Key
 {
-    protected bool $isPublicKey = false;
-    protected bool $isSigningKey = false;
-    protected bool $isAsymmetricKey = false;
-    private string $keyMaterial = '';
+    /**
+     * @var bool
+     */
+    protected $isPublicKey = false;
+
+    /**
+     * @var bool
+     */
+    protected $isSigningKey = false;
+
+    /**
+     * @var bool
+     */
+    protected $isAsymmetricKey = false;
+
+    /**
+     * @var string
+     */
+    private $keyMaterial = '';
 
     /**
      * Don't let this ever succeed
@@ -119,7 +133,7 @@ class Key
      * Get the actual key material
      *
      * @return string
-     * @throws TypeError
+     * @throws \TypeError
      */
     public function getRawKeyMaterial(): string
     {

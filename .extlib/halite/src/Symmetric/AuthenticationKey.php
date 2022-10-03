@@ -5,9 +5,6 @@ namespace ParagonIE\Halite\Symmetric;
 use ParagonIE\ConstantTime\Binary;
 use ParagonIE\Halite\Alerts\InvalidKey;
 use ParagonIE\HiddenString\HiddenString;
-use TypeError;
-use const SODIUM_CRYPTO_AUTH_KEYBYTES;
-use function sprintf;
 
 /**
  * Class AuthenticationKey
@@ -21,20 +18,16 @@ final class AuthenticationKey extends SecretKey
 {
     /**
      * AuthenticationKey constructor.
-     *
      * @param HiddenString $keyMaterial - The actual key data
      *
      * @throws InvalidKey
-     * @throws TypeError
+     * @throws \TypeError
      */
     public function __construct(HiddenString $keyMaterial)
     {
-        if (Binary::safeStrlen($keyMaterial->getString()) !== SODIUM_CRYPTO_AUTH_KEYBYTES) {
+        if (Binary::safeStrlen($keyMaterial->getString()) !== \SODIUM_CRYPTO_AUTH_KEYBYTES) {
             throw new InvalidKey(
-                sprintf(
-                    'Authentication key must be CRYPTO_AUTH_KEYBYTES (%d) bytes long',
-                    SODIUM_CRYPTO_AUTH_KEYBYTES
-                )
+                'Authentication key must be CRYPTO_AUTH_KEYBYTES bytes long'
             );
         }
         parent::__construct($keyMaterial);

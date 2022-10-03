@@ -20,14 +20,6 @@ use ParagonIE\Halite\Symmetric\{
     EncryptionKey
 };
 use ParagonIE\HiddenString\HiddenString;
-use SodiumException;
-use TypeError;
-use function
-    hash_equals,
-    is_string,
-    json_decode,
-    json_encode,
-    setcookie;
 
 /**
  * Class Cookie
@@ -49,7 +41,10 @@ use function
  */
 final class Cookie 
 {
-    protected EncryptionKey $key;
+    /**
+     * @var EncryptionKey
+     */
+    protected $key;
 
     /**
      * Cookie constructor.
@@ -59,7 +54,6 @@ final class Cookie
     {
         $this->key = $key;
     }
-
     /**
      * Hide this from var_dump(), etc.
      * 
@@ -76,15 +70,12 @@ final class Cookie
      * Fetch a value from an encrypted cookie
      *
      * @param string $name
-     *
      * @return mixed|null (typically an array)
-     *
      * @throws InvalidDigestLength
      * @throws InvalidSignature
      * @throws CannotPerformOperation
      * @throws InvalidType
-     * @throws SodiumException
-     * @throws TypeError
+     * @throws \TypeError
      */
     public function fetch(string $name)
     {
@@ -94,18 +85,16 @@ final class Cookie
         try {
             /** @var string|array|int|float|bool $stored */
             $stored = $_COOKIE[$name];
-            if (!is_string($stored)) {
+            if (!\is_string($stored)) {
                 throw new InvalidType('Cookie value is not a string');
             }
             $config = self::getConfig($stored);
-            /** @var string|bool $encoding */
-            $encoding = $config->ENCODING;
             $decrypted = Crypto::decrypt(
                 $stored,
                 $this->key,
-                $encoding
+                $config->ENCODING
             );
-            return json_decode($decrypted->getString(), true);
+            return \json_decode($decrypted->getString(), true);
         } catch (InvalidMessage $e) {
             return null;
         }
@@ -118,7 +107,7 @@ final class Cookie
      * @return SymmetricConfig
      *
      * @throws InvalidMessage
-     * @throws TypeError
+     * @throws \TypeError
      */
     protected static function getConfig(string $stored): SymmetricConfig
     {
@@ -129,7 +118,7 @@ final class Cookie
                 'Encrypted password hash is way too short.'
             );
         }
-        if (hash_equals(Binary::safeSubstr($stored, 0, 5), Halite::VERSION_PREFIX)) {
+        if (\hash_equals(Binary::safeSubstr($stored, 0, 5), Halite::VERSION_PREFIX)) {
             $decoded = Base64UrlSafe::decode($stored);
             return SymmetricConfig::getConfig(
                 $decoded,
@@ -150,18 +139,14 @@ final class Cookie
      * @param string $domain (defaults to NULL)
      * @param bool $secure   (defaults to TRUE)
      * @param bool $httpOnly (defaults to TRUE)
-     * @param string $sameSite (defaults to ''; PHP >= 7.3.0)
-     *
+     * @param string $samesite (defaults to ''; PHP >= 7.3.0)
      * @return bool
      *
      * @throws InvalidDigestLength
      * @throws CannotPerformOperation
      * @throws InvalidMessage
      * @throws InvalidType
-     * @throws SodiumException
-     * @throws TypeError
-     *
-     * @psalm-suppress InvalidArgument  PHP version incompatibilities
+     * @throws \TypeError
      * @psalm-suppress MixedArgument
      */
     public function store(
@@ -176,24 +161,34 @@ final class Cookie
     ): bool {
         $val = Crypto::encrypt(
             new HiddenString(
-                (string) json_encode($value)
+                (string) \json_encode($value)
             ),
             $this->key
         );
-        $options = [
-            'expires' => (int) $expire,
-            'path' => (string) $path,
-            'domain' => (string) $domain,
-            'secure' => (bool) $secure,
-            'httponly' => (bool) $httpOnly,
-        ];
-        if ($sameSite !== '') {
-            $options['samesite'] = (string) $sameSite;
+        if (\version_compare(PHP_VERSION, '7.3.0') >= 0) {
+            $options = [
+                'expires' => (int) $expire,
+                'path' => (string) $path,
+                'domain' => (string) $domain,
+                'secure' => (bool) $secure,
+                'httponly' => (bool) $httpOnly,
+            ];
+            if ($sameSite !== '') {
+                $options['samesite'] = (string) $sameSite;
+            }
+            return \setcookie(
+                $name,
+                $val,
+                $options);
         }
-        return setcookie(
+        return \setcookie(
             $name,
             $val,
-            $options
+            (int) $expire,
+            (string) $path,
+            (string) $domain,
+            (bool) $secure,
+            (bool) $httpOnly
         );
     }
 }

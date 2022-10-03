@@ -5,8 +5,6 @@ namespace ParagonIE\Halite\Asymmetric;
 use ParagonIE\ConstantTime\Binary;
 use ParagonIE\Halite\Alerts\InvalidKey;
 use ParagonIE\HiddenString\HiddenString;
-use const SODIUM_CRYPTO_BOX_PUBLICKEYBYTES;
-use function sprintf;
 
 /**
  * Class EncryptionPublicKey
@@ -28,12 +26,9 @@ final class EncryptionPublicKey extends PublicKey
      */
     public function __construct(HiddenString $keyMaterial)
     {
-        if (Binary::safeStrlen($keyMaterial->getString()) !== SODIUM_CRYPTO_BOX_PUBLICKEYBYTES) {
+        if (Binary::safeStrlen($keyMaterial->getString()) !== \SODIUM_CRYPTO_BOX_PUBLICKEYBYTES) {
             throw new InvalidKey(
-                sprintf(
-                    'Encryption public key must be CRYPTO_BOX_PUBLICKEYBYTES (%d) bytes long',
-                    SODIUM_CRYPTO_BOX_PUBLICKEYBYTES
-                )
+                'Encryption public key must be CRYPTO_BOX_PUBLICKEYBYTES bytes long'
             );
         }
         parent::__construct($keyMaterial);
