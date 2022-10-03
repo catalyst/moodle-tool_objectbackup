@@ -28,3 +28,4 @@ defined('MOODLE_INTERNAL') || die();
 $string['pluginname'] = 'Objectfs backups';
 $string['pluginsettings'] = 'Plugin settings';
 $string['pushobjectstask'] = 'Push objects to external storage';
+$string['updatelastseen'] = 'Update last time the file was seen in files table';

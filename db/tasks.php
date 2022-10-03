@@ -33,4 +33,11 @@ $tasks = [
      'day'       => '*',
      'dayofweek' => '*',
      'month'     => '*'],
+     ['classname' => 'tool_objectbackup\task\update_lastseen',
+      'blocking'  => 0,
+      'minute'    => 'R',
+      'hour'      => 'R',
+      'day'       => 'R',
+      'dayofweek' => '*',
+      'month'     => '*'],
     ];
