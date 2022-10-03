@@ -24,13 +24,16 @@
 
 namespace tool_objectbackup\local\store\swift;
 
+/**
+ * * Custom client class for objectbackup.
+ */
 class client extends \tool_objectfs\local\store\swift\client {
 
     /**
      * swift settings form with the following elements:
      *
      * @param admin_settingpage $settings
-     * @param $config
+     * @param  object $config
      * @return admin_settingpage
      */
     public function define_client_section($settings, $config) {

@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Task that pushes files to S3.
+ * Task that pushes files to external storage.
  *
  * @package   tool_objectbackup
  * @author    Dan Marsden
@@ -25,7 +25,9 @@
 
 namespace tool_objectbackup\task;
 
-
+/**
+ * Class to push files to external storage.
+ */
 class push_objects_to_storage extends \core\task\scheduled_task {
     /**
      * Get task name

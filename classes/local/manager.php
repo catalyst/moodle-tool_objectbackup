@@ -17,8 +17,8 @@
 /**
  * manager class.
  *
- * @package   tool_objectfs
- * @author    Gleimer Mora <gleimermora@catalyst-au.net>
+ * @package   tool_objectbackup
+ * @author    Dan Marsden
  * @copyright Catalyst IT
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -26,9 +26,14 @@
 namespace tool_objectbackup\local;
 
 use stdClass;
+/**
+ * Custom manager class to load objectbackup specific settings.
+ */
 class manager extends \tool_objectfs\local\manager {
 
     /**
+     * Gets custom settings, and sets defaults.
+     *
      * @return stdClass
      * @throws \dml_exception
      */
@@ -100,7 +105,9 @@ class manager extends \tool_objectfs\local\manager {
     }
 
     /**
-     * @param $config
+     * Get client class from file system class name stored in setting.
+     *
+     * @param object $config
      * @return bool
      */
     public static function get_client($config) {

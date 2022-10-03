@@ -17,8 +17,8 @@
 /**
  * S3 client.
  *
- * @package   tool_objectfs
- * @author    Kenneth Hendricks <kennethhendricks@catalyst-au.net>
+ * @package   tool_objectbackup
+ * @author    Dan Marsden
  * @copyright Catalyst IT
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -27,6 +27,9 @@ namespace tool_objectbackup\local\store\s3;
 
 use local_aws\admin_settings_aws_region;
 
+/**
+ * Custom client class for objectbackup.
+ */
 class client extends \tool_objectfs\local\store\s3\client {
 
     /**

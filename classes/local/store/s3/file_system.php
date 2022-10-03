@@ -33,6 +33,9 @@ defined('MOODLE_INTERNAL') || die();
 require_once($CFG->dirroot . '/admin/tool/objectfs/lib.php');
 require_once($CFG->dirroot . '/admin/tool/objectbackup/locallib.php');
 
+/**
+ * Custom file_system class to pull through objectbackup config settings.
+ */
 class file_system extends \tool_objectfs\local\store\s3\file_system {
     /**
      * Custom construct function to load objectbackup config instead of objectfs.

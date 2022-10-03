@@ -29,8 +29,14 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/admin/tool/objectfs/lib.php');
 
+/**
+ * Custom file_system class to load objectbackup settings.
+ */
 class file_system extends \tool_objectfs\local\store\swift\file_system {
 
+    /**
+     * Override to pull in objectbackup settings.
+     */
     public function __construct() {
         global $CFG;
         parent::__construct(); // Setup filedir.
