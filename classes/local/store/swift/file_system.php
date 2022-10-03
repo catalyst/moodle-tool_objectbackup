@@ -46,4 +46,25 @@ class file_system extends \tool_objectfs\local\store\swift\file_system {
         $this->externalclient = $this->initialise_external_client($config);
         $this->externalclient->register_stream_wrapper();
     }
+
+    /**
+     * Allows the file to be encrypted and passed to external storage.
+     *
+     * @param [type] $contenthash
+     * @return void
+     */
+    public function copy_and_encrypt_from_local_to_external($contenthash) {
+        $localpath = $this->get_local_path_from_hash($contenthash);
+        $tempfile = make_request_directory() . '/' . $contenthash;
+        // Create encrypted temp file and store.
+        $encryptionkey = \ParagonIE\Halite\KeyFactory::importEncryptionKey(tool_objectbackup_get_encryption_key());
+
+        \ParagonIE\Halite\File::encrypt($localpath, $tempfile, $encryptionkey);
+
+        $externalpath = $this->get_external_path_from_hash($contenthash);
+        $result = copy($tempfile, $externalpath);
+        unlink($tempfile);
+
+        return $result;
+    }
 }
