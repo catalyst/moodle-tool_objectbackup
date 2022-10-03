@@ -24,7 +24,7 @@
 
  defined('MOODLE_INTERNAL') || die();
 
-require_once(__DIR__.'.extlib/halite/autoload.php');
+require_once(__DIR__.'/.extlib/halite/autoload.php');
 
 use ParagonIE\Halite\KeyFactory;
 use ParagonIE\HiddenString\HiddenString;

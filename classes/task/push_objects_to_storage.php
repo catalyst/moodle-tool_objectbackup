@@ -48,6 +48,10 @@ class push_objects_to_storage extends \core\task\scheduled_task {
         require_once($CFG->dirroot.'/admin/tool/objectbackup/locallib.php');
 
         $config = \tool_objectbackup\local\manager::get_config();
+        if (empty($config->filesystem)) {
+            mtrace("objectbackup not configured");
+            return;
+        }
         $fs = new $config->filesystem();
 
         $maxfiles = 100; // TODO: Make this a setting.

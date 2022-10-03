@@ -44,7 +44,12 @@ class update_lastseen extends \core\task\scheduled_task {
      * @throws moodle_exception
      */
     public function execute() {
-        global $DB, $CFG;
+        global $DB;
+
+        if (empty(get_config("tool_objectbackup", 'filesystem'))) {
+            mtrace("objectbackup not configured");
+            return;
+        }
         // TODO: this is probably not mysql compatible - check performance, look at making it cross-db compatible.
         $sql = "UPDATE {tool_objectbackup}
                        SET lastseen = ?
