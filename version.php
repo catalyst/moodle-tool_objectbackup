@@ -32,3 +32,4 @@ $plugin->maturity = MATURITY_ALPHA;
 $plugin->dependencies = [
     'tool_objectfs' => ANY_VERSION,
 ];
+$plugin->supported = [39, 401];
