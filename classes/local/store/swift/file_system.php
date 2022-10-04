@@ -54,7 +54,17 @@ class file_system extends \tool_objectfs\local\store\swift\file_system {
      * @return void
      */
     public function copy_and_encrypt_from_local_to_external($contenthash) {
+        // First simple check - is this file stored locally.
         $localpath = $this->get_local_path_from_hash($contenthash);
+        if (!file_exists($localpath)) {
+            // Try using Moodle's main file storage - might be an externally stored object.
+            $fs = get_file_storage(); // Main core file_storage api instead of the custom one.
+            $filesystem = $fs->get_file_system();
+            $localpath = $filesystem->get_local_path_from_hash($contenthash, true);
+            if (!is_readable($localpath)) {
+                return false;
+            }
+        }
         $tempfile = make_request_directory() . '/' . $contenthash;
         // Create encrypted temp file and store.
         $encryptionkey = tool_objectbackup_get_encryption_key();

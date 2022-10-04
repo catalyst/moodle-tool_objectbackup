@@ -63,10 +63,11 @@ class push_objects_to_storage extends \core\task\scheduled_task {
         $filerecords = $DB->get_recordset_sql($sql, [], 0, $maxfiles);
         $filestoadd = [];
         foreach ($filerecords as $file) {
-            $fs->copy_and_encrypt_from_local_to_external($file->contenthash);
+            $success = $fs->copy_and_encrypt_from_local_to_external($file->contenthash);
             // Upload this file to external storage.
-            $filestoadd[] = ['contenthash' => $file->contenthash, 'lastseen' => $now];
-
+            if ($success) {
+                $filestoadd[] = ['contenthash' => $file->contenthash, 'lastseen' => $now];
+            }
         }
         $filerecords->close();
         $DB->insert_records('tool_objectbackup', $filestoadd);
