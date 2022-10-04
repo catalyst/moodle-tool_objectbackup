@@ -57,7 +57,7 @@ class file_system extends \tool_objectfs\local\store\swift\file_system {
         $localpath = $this->get_local_path_from_hash($contenthash);
         $tempfile = make_request_directory() . '/' . $contenthash;
         // Create encrypted temp file and store.
-        $encryptionkey = \ParagonIE\Halite\KeyFactory::importEncryptionKey(tool_objectbackup_get_encryption_key());
+        $encryptionkey = tool_objectbackup_get_encryption_key();
 
         \ParagonIE\Halite\File::encrypt($localpath, $tempfile, $encryptionkey);
 

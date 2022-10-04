@@ -25,19 +25,30 @@
  defined('MOODLE_INTERNAL') || die();
 
 require_once(__DIR__.'/.extlib/halite/autoload.php');
+require_once(__DIR__.'/.extlib/halite/HiddenString.php');
+require_once(__DIR__.'/.extlib/halite/constant_time_encoding-master/src/Binary.php');
+require_once(__DIR__.'/.extlib/halite/constant_time_encoding-master/src/EncoderInterface.php');
+require_once(__DIR__.'/.extlib/halite/constant_time_encoding-master/src/Hex.php');
+
+require_once(__DIR__.'/.extlib/halite/constant_time_encoding-master/src/Encoding.php');
+
 
 use ParagonIE\Halite\KeyFactory;
 use ParagonIE\HiddenString\HiddenString;
+use ParagonIE\Halite\Symmetric\EncryptionKey;
 /**
  * Get encryptionkey, sets a new one if we don't have one already.
  *
- * @return HiddenString
+ * @return EncryptionKey
  */
 function tool_objectbackup_get_encryption_key() {
     $key = get_config('tool_objectbackup', 'key');
     if (empty($key)) {
         $key = KeyFactory::generateEncryptionKey();
-        set_config('key', $key, 'tool_objectbackup');
+        $keystring = KeyFactory::export($key)->getString();
+        set_config('key',  base64_encode($keystring), 'tool_objectbackup');
+        return $key;
     }
-    return new HiddenString($key);
+    $encryptionkey = KeyFactory::importEncryptionKey(new HiddenString(base64_decode($key)));
+    return $encryptionkey;
 }

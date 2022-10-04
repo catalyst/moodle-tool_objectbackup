@@ -60,7 +60,7 @@ class file_system extends \tool_objectfs\local\store\s3\file_system {
 
         $tempfile = make_request_directory() . '/' . $contenthash;
         // Create encrypted temp file and store.
-        $encryptionkey = \ParagonIE\Halite\KeyFactory::importEncryptionKey(tool_objectbackup_get_encryption_key());
+        $encryptionkey = tool_objectbackup_get_encryption_key();
 
         \ParagonIE\Halite\File::encrypt($localpath, $tempfile, $encryptionkey);
 
