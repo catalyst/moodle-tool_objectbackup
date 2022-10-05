@@ -37,7 +37,7 @@ class manager extends \tool_objectfs\local\manager {
      * @return stdClass
      * @throws \dml_exception
      */
-    public static function get_config() {
+    public static function get_objectfs_config() {
         global $CFG;
         // TODO: Clean up vars not used.
         $config = new stdClass;

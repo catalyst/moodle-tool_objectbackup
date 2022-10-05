@@ -41,19 +41,23 @@ class file_system extends \tool_objectfs\local\store\swift\file_system {
         global $CFG;
         parent::__construct(); // Setup filedir.
 
-        $config = \tool_objectbackup\local\manager::get_config(); // Use objectbackup settings.
+        $config = \tool_objectbackup\local\manager::get_objectfs_config(); // Use objectbackup settings.
 
         $this->externalclient = $this->initialise_external_client($config);
         $this->externalclient->register_stream_wrapper();
+        // Set correct context in stream_wrapper.
+        // TODO: this feels unsafe - maybe we should implement our own custom stream_wrapper.
+        \tool_objectfs\local\store\swift\stream_wrapper::set_default_context($this->externalclient->get_seekable_stream_context());
     }
 
     /**
      * Allows the file to be encrypted and passed to external storage.
      *
      * @param [type] $contenthash
+     * @param bool $encrypt
      * @return void
      */
-    public function copy_and_encrypt_from_local_to_external($contenthash) {
+    public function copy_and_encrypt_from_local_to_external($contenthash, $encrypt) {
         // First simple check - is this file stored locally.
         $localpath = $this->get_local_path_from_hash($contenthash);
         if (!file_exists($localpath)) {
@@ -65,15 +69,20 @@ class file_system extends \tool_objectfs\local\store\swift\file_system {
                 return false;
             }
         }
-        $tempfile = make_request_directory() . '/' . $contenthash;
-        // Create encrypted temp file and store.
-        $encryptionkey = tool_objectbackup_get_encryption_key();
+        if ($encrypt) {
+            $tempfile = make_request_directory() . '/' . $contenthash;
+            // Create encrypted temp file and store.
+            $encryptionkey = tool_objectbackup_get_encryption_key();
 
-        \ParagonIE\Halite\File::encrypt($localpath, $tempfile, $encryptionkey);
+            \ParagonIE\Halite\File::encrypt($localpath, $tempfile, $encryptionkey);
 
-        $externalpath = $this->get_external_path_from_hash($contenthash);
-        $result = copy($tempfile, $externalpath);
-        unlink($tempfile);
+            $externalpath = $this->get_external_path_from_hash($contenthash);
+            $result = copy($tempfile, $externalpath);
+            unlink($tempfile);
+        } else {
+            $externalpath = $this->get_external_path_from_hash($contenthash);
+            $result = copy($localpath, $externalpath);
+        }
 
         return $result;
     }

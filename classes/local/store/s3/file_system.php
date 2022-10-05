@@ -44,7 +44,7 @@ class file_system extends \tool_objectfs\local\store\s3\file_system {
         global $CFG;
         parent::__construct(); // Setup filedir.
 
-        $config = \tool_objectbackup\local\manager::get_config(); // Use objectbackup settings.
+        $config = \tool_objectbackup\local\manager::get_objectfs_config(); // Use objectbackup settings.
 
         $this->externalclient = $this->initialise_external_client($config);
         $this->externalclient->register_stream_wrapper();
@@ -53,9 +53,10 @@ class file_system extends \tool_objectfs\local\store\s3\file_system {
      * Allows the file to be encrypted and passed to external storage.
      *
      * @param [type] $contenthash
+     * @param bool $encrypt
      * @return void
      */
-    public function copy_and_encrypt_from_local_to_external($contenthash) {
+    public function copy_and_encrypt_from_local_to_external($contenthash, $encrypt) {
         $localpath = $this->get_local_path_from_hash($contenthash);
         if (!is_readable($localpath)) {
             // Try using Moodle's main file storage - might be an externally stored object.
@@ -66,22 +67,33 @@ class file_system extends \tool_objectfs\local\store\s3\file_system {
                 return false;
             }
         }
-        $tempfile = make_request_directory() . '/' . $contenthash;
-        // Create encrypted temp file and store.
-        $encryptionkey = tool_objectbackup_get_encryption_key();
+        if ($encrypt) {
+            $tempfile = make_request_directory() . '/' . $contenthash;
+            // Create encrypted temp file and store.
+            $encryptionkey = tool_objectbackup_get_encryption_key();
 
-        \ParagonIE\Halite\File::encrypt($localpath, $tempfile, $encryptionkey);
-
-        try {
-            $this->get_external_client()->upload_to_s3($tempfile, $contenthash);
-            unlink($tempfile);
-            return true;
-        } catch (\Exception $e) {
-            $this->get_logger()->error_log(
-                'ERROR: copy ' . $tempfile . ' to ' . $this->get_external_path_from_hash($contenthash) . ': ' . $e->getMessage()
-            );
-            unlink($tempfile);
-            return false;
+            \ParagonIE\Halite\File::encrypt($localpath, $tempfile, $encryptionkey);
+            try {
+                $this->get_external_client()->upload_to_s3($tempfile, $contenthash);
+                unlink($tempfile);
+                return true;
+            } catch (\Exception $e) {
+                $this->get_logger()->error_log(
+                    'ERROR: copy ' . $tempfile . ' to ' . $this->get_external_path_from_hash($contenthash) . ': ' . $e->getMessage()
+                );
+                unlink($tempfile);
+                return false;
+            }
+        } else {
+            try {
+                $this->get_external_client()->upload_to_s3($localpath, $contenthash);
+                return true;
+            } catch (\Exception $e) {
+                $this->get_logger()->error_log(
+                    'ERROR: copy ' . $localpath . ' to ' . $this->get_external_path_from_hash($contenthash) . ': ' . $e->getMessage()
+                );
+                return false;
+            }
         }
     }
 }

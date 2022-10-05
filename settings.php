@@ -42,7 +42,7 @@ $ADMIN->add('tool_objectbackup', $settings);
 
 if ($ADMIN->fulltree) {
 
-    $config = \tool_objectbackup\local\manager::get_config();
+    $config = \tool_objectbackup\local\manager::get_objectfs_config();
 
     $settings->add(new admin_setting_heading('tool_objectbackup/storagefilesystemselection',
         new lang_string('settings:clientselection:header', 'tool_objectfs'), ''));
@@ -51,6 +51,10 @@ if ($ADMIN->fulltree) {
         new lang_string('settings:clientselection:title', 'tool_objectfs'),
         new lang_string('settings:clientselection:title_help', 'tool_objectfs'), '',
         \tool_objectbackup\local\manager::get_available_fs_list()));
+
+    $settings->add(new admin_setting_configcheckbox('tool_objectbackup/encrypt',
+        new lang_string('settings:encrypt', 'tool_objectbackup'),
+        new lang_string('settings:encrypt_help', 'tool_objectbackup'), 0));
 
     $client = \tool_objectbackup\local\manager::get_client($config);
     if ($client && $client->get_availability()) {

@@ -47,7 +47,7 @@ class push_objects_to_storage extends \core\task\scheduled_task {
         global $DB, $CFG;
         require_once($CFG->dirroot.'/admin/tool/objectbackup/locallib.php');
 
-        $config = \tool_objectbackup\local\manager::get_config();
+        $config = \tool_objectbackup\local\manager::get_objectfs_config();
         if (empty($config->filesystem)) {
             mtrace("objectbackup not configured");
             return;
@@ -63,7 +63,7 @@ class push_objects_to_storage extends \core\task\scheduled_task {
         $filerecords = $DB->get_recordset_sql($sql, [], 0, $maxfiles);
         $filestoadd = [];
         foreach ($filerecords as $file) {
-            $success = $fs->copy_and_encrypt_from_local_to_external($file->contenthash);
+            $success = $fs->copy_and_encrypt_from_local_to_external($file->contenthash, $config->encrypt);
             // Upload this file to external storage.
             if ($success) {
                 $filestoadd[] = ['contenthash' => $file->contenthash, 'lastseen' => $now];
