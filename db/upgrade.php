@@ -15,11 +15,11 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Provides the {@see xmldb_local_greetings_upgrade()} function.
+ * Provides the {@see xmldb_tool_objectbackup_upgrade()} function.
  *
- * @package     local_greetings
+ * @package     tool_objectbackup
  * @category    upgrade
- * @copyright   2022 Your Name <email@example.com>
+ * @copyright   2022 Catalyst IT
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -29,8 +29,8 @@ defined('MOODLE_INTERNAL') || die();
  * Define upgrade steps to be performed to upgrade the plugin from the old version to the current one.
  *
  * @param int $oldversion Version number the plugin is being upgraded from.
+ * @return bool always true
  */
-
 function xmldb_tool_objectbackup_upgrade($oldversion) {
     global $DB;
 
