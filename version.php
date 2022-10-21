@@ -26,7 +26,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'tool_objectbackup';
 $plugin->release = '0.1.0';
-$plugin->version = 2022092900;
+$plugin->version = 2022102000;
 $plugin->requires = 2020061500;
 $plugin->maturity = MATURITY_ALPHA;
 $plugin->dependencies = [
