@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - https://moodle.org/
+// This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see https://www.gnu.org/licenses/.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * Provides the {@see xmldb_local_greetings_upgrade()} function.
@@ -31,10 +31,10 @@ defined('MOODLE_INTERNAL') || die();
  * @param int $oldversion Version number the plugin is being upgraded from.
  */
 
- function xmldb_tool_objectbackup_upgrade($oldversion) {
+function xmldb_tool_objectbackup_upgrade($oldversion) {
     global $DB;
 
-    $result = TRUE;
+    $result = true;
 
     if ($oldversion < 2022102000) {
 
@@ -44,8 +44,8 @@ defined('MOODLE_INTERNAL') || die();
         // Conditionally launch create table for tool_objectbackup.
         $dbman = $DB->get_manager(); // Loads ddl manager and xmldb classes.
 
-        // Define field monitor to be added to tool_objectbackup
-        $filesizefield = new xmldb_field('filesize', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null,'lastseen');
+        // Define field monitor to be added to tool_objectbackup.
+        $filesizefield = new xmldb_field('filesize', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null, 'lastseen');
         $mimetypefield = new xmldb_field('mimetype', XMLDB_TYPE_CHAR, '100', null, null, null, null, 'filesize');
 
         if (!$dbman->field_exists($table, $filesizefield)) {
@@ -62,4 +62,3 @@ defined('MOODLE_INTERNAL') || die();
 
     return $result;
 }
-?>
