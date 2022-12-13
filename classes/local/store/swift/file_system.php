@@ -38,7 +38,6 @@ class file_system extends \tool_objectfs\local\store\swift\file_system {
      * Override to pull in objectbackup settings.
      */
     public function __construct() {
-        global $CFG;
         parent::__construct(); // Setup filedir.
 
         $config = \tool_objectbackup\local\manager::get_objectfs_config(); // Use objectbackup settings.
@@ -46,7 +45,6 @@ class file_system extends \tool_objectfs\local\store\swift\file_system {
         $this->externalclient = $this->initialise_external_client($config);
         $this->externalclient->register_stream_wrapper();
         // Set correct context in stream_wrapper.
-        // TODO: this feels unsafe - maybe we should implement our own custom stream_wrapper.
         \tool_objectfs\local\store\swift\stream_wrapper::set_default_context($this->externalclient->get_seekable_stream_context());
     }
 
