@@ -45,7 +45,7 @@ function xmldb_tool_objectbackup_upgrade($oldversion) {
         $dbman = $DB->get_manager(); // Loads ddl manager and xmldb classes.
 
         // Define field monitor to be added to tool_objectbackup.
-        $filesizefield = new xmldb_field('filesize', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null, 'lastseen');
+        $filesizefield = new xmldb_field('filesize', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null, 'deleted');
         $mimetypefield = new xmldb_field('mimetype', XMLDB_TYPE_CHAR, '100', null, null, null, null, 'filesize');
 
         if (!$dbman->field_exists($table, $filesizefield)) {

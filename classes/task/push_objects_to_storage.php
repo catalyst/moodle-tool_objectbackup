@@ -66,7 +66,7 @@ class push_objects_to_storage extends \core\task\scheduled_task {
             $success = $fs->copy_and_encrypt_from_local_to_external($file->contenthash, $config->encrypt);
             // Upload this file to external storage.
             if ($success) {
-                $filestoadd[] = ['contenthash' => $file->contenthash, 'lastseen' => $now, 'filesize' => $file->filesize, 'mimetype' => $file->mimetype];
+                $filestoadd[] = ['contenthash' => $file->contenthash, 'filesize' => $file->filesize, 'mimetype' => $file->mimetype];
             }
         }
         $filerecords->close();
