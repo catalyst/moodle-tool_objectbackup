@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="admin/tool/objectbackup/db" VERSION="20220929" COMMENT="XMLDB file for Moodle admin/tool/objectbackup"
+<XMLDB PATH="admin/tool/objectbackup/db" VERSION="20221214" COMMENT="XMLDB file for Moodle admin/tool/objectbackup"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../../lib/xmldb/xmldb.xsd"
 >
@@ -11,6 +11,20 @@
         <FIELD NAME="deleted" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="timestamp of last time this file was seen in mdl_files table."/>
         <FIELD NAME="filesize" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="mimetype" TYPE="char" LENGTH="100" NOTNULL="false" SEQUENCE="false" COMMENT="type of file - jpeg image, open document spreadsheet"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="tool_objectbackup_stats" COMMENT="objectbackup stats.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="missingfromexternal" TYPE="int" LENGTH="20" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="count of files currently missing from external backup."/>
+        <FIELD NAME="external" TYPE="int" LENGTH="20" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="count of files stored in external backup"/>
+        <FIELD NAME="externalsize" TYPE="int" LENGTH="20" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Total size of files sent to external backup."/>
+        <FIELD NAME="externalonly" TYPE="int" LENGTH="20" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Count of files that are only in the external backup storage (deleted in Moodle.)"/>
+        <FIELD NAME="externalonlysize" TYPE="int" LENGTH="20" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Total size of files only stored in external backups (deleted in Moodle.)"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="time the stats record was generated."/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
