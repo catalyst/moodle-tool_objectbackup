@@ -54,15 +54,18 @@ class push_objects_to_storage extends \core\task\scheduled_task {
         }
         $fs = new $config->filesystem();
 
-        $maxfiles = 100; // TODO: Make this a setting.
-        $now = time();
         $sql = "SELECT f.*
                   FROM {files} f
                   LEFT JOIN {tool_objectbackup} b on b.contenthash = f.contenthash
                   WHERE b.id is null";
-        $filerecords = $DB->get_recordset_sql($sql, [], 0, $maxfiles);
+        $filerecords = $DB->get_recordset_sql($sql);
         $filestoadd = [];
+        $finishtime = time() + (int)$config->maxtaskruntime;
         foreach ($filerecords as $file) {
+            if (time() >= $finishtime) {
+                mtrace('Reached max transfer runtime limit for this task run.');
+                break;
+            }
             $success = $fs->copy_and_encrypt_from_local_to_external($file->contenthash, $config->encrypt);
             // Upload this file to external storage.
             if ($success) {
@@ -70,7 +73,9 @@ class push_objects_to_storage extends \core\task\scheduled_task {
             }
         }
         $filerecords->close();
-        $DB->insert_records('tool_objectbackup', $filestoadd);
+        if (!empty($filestoadd)) {
+            $DB->insert_records('tool_objectbackup', $filestoadd);
+        }
         mtrace(count($filestoadd). " files uploaded to external storage");
     }
 }

@@ -33,5 +33,7 @@ $string['settings:aws:header'] = 'Amazon S3 Settings';
 $string['settings:aws:usesdkcreds'] = 'Use the default credential provider chain to find AWS credentials';
 $string['settings:encrypt'] = 'Encrypt files';
 $string['settings:encrypt_help'] = 'If enabled, the files sent to the external storage will be encrypted first - preventing anyone with access to the storage container from being able to view the files without the encryption key (stored in the database)';
+$string['settings:maxtaskruntime'] = 'Maximum transfer task runtime';
+$string['settings:maxtaskruntime_help'] = 'Maximum time this task should spend transferring files during each run.';
 $string['statstask'] = 'Generate backup storage statistics';
 $string['updatedeleted'] = 'Update last time the file was seen in files table';
