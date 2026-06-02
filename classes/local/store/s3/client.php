@@ -44,7 +44,7 @@ class client extends \tool_objectfs\local\store\s3\client {
         $plugins = \core_component::get_plugin_list('local');
 
         $settings->add(new \admin_setting_heading('tool_objectbackup/aws',
-            new \lang_string('settings:aws:header', 'tool_objectbackup'), $this->define_client_check()));
+            new \lang_string('settings:aws:header', 'tool_objectbackup'),''));
 
         $settings->add(new \admin_setting_configcheckbox('tool_objectbackup/s3_usesdkcreds',
             new \lang_string('settings:aws:usesdkcreds', 'tool_objectbackup'),

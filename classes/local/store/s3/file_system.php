@@ -58,6 +58,8 @@ class file_system extends \tool_objectfs\local\store\s3\file_system {
      */
     public function copy_and_encrypt_from_local_to_external($contenthash, $encrypt) {
         $localpath = $this->get_local_path_from_hash($contenthash);
+        $mime = $this->get_mimetype_from_hash($contenthash);
+
         if (!is_readable($localpath)) {
             // Try using Moodle's main file storage - might be an externally stored object.
             $fs = get_file_storage(); // Main core file_storage api instead of the custom one.
@@ -74,7 +76,7 @@ class file_system extends \tool_objectfs\local\store\s3\file_system {
 
             \ParagonIE\Halite\File::encrypt($localpath, $tempfile, $encryptionkey);
             try {
-                $this->get_external_client()->upload_to_s3($tempfile, $contenthash);
+                $this->get_external_client()->upload_to_s3($tempfile, $contenthash, $mime);
                 unlink($tempfile);
                 return true;
             } catch (\Exception $e) {
@@ -86,7 +88,7 @@ class file_system extends \tool_objectfs\local\store\s3\file_system {
             }
         } else {
             try {
-                $this->get_external_client()->upload_to_s3($localpath, $contenthash);
+                $this->get_external_client()->upload_to_s3($localpath, $contenthash, $mime);
                 return true;
             } catch (\Exception $e) {
                 $this->get_logger()->error_log(
