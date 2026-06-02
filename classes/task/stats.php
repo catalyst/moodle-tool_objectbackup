@@ -58,22 +58,22 @@ class stats extends \core\task\scheduled_task {
                   FROM {files} f
              LEFT JOIN {tool_objectbackup} b on b.contenthash = f.contenthash
                  WHERE b.id is null";
-        $stat->missingfromexternal = $DB->get_field_sql($sql);
+        $stat->missingfromexternal = $DB->get_field_sql($sql) ?? 0;
 
         // Get count of all backed up files.
-        $stat->external = $DB->count_records('tool_objectbackup');
+        $stat->external = $DB->count_records('tool_objectbackup') ?? 0;
 
         // Get total size of all backup files.
         $sql = "SELECT sum(filesize) FROM {tool_objectbackup}";
-        $stat->externalsize = $DB->get_field_sql($sql);
+        $stat->externalsize = $DB->get_field_sql($sql) ?? 0;
 
         // Get count of all files only in external backup.
         $sql = "SELECT count(id) FROM {tool_objectbackup} WHERE deleted IS NOT NULL";
-        $stat->externalonly = $DB->get_field_sql($sql);
+        $stat->externalonly = $DB->get_field_sql($sql) ?? 0;
 
         // Get size of files only in external backup.
         $sql = "SELECT sum(filesize) FROM {tool_objectbackup} WHERE deleted IS NOT NULL";
-        $stat->externalonlysize = $DB->get_field_sql($sql);
+        $stat->externalonlysize = $DB->get_field_sql($sql) ?? 0;
 
         $stat->timecreated = time();
         $DB->insert_record('tool_objectbackup_stats', $stat);
