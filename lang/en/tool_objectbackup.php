@@ -27,6 +27,15 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['pluginname'] = 'Objectfs backups';
 $string['pluginsettings'] = 'Plugin settings';
+$string['object_status:external'] = 'Files in external backup';
+$string['object_status:externalonly'] = 'Files only in external backup';
+$string['object_status:externalonlysize'] = 'Size only in external backup';
+$string['object_status:externalsize'] = 'Total external backup size';
+$string['object_status:last_run'] = 'This report was generated on {$a}';
+$string['object_status:metric'] = 'Metric';
+$string['object_status:missingfromexternal'] = 'Files missing from external backup';
+$string['object_status:page'] = 'Object backup status';
+$string['object_status:value'] = 'Value';
 $string['privacy:metadata'] = 'The tool objectbackup plugin does not store any personal data.';
 $string['pushobjectstask'] = 'Push objects to external storage';
 $string['settings:aws:header'] = 'Amazon S3 Settings';

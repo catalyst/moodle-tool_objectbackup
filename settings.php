@@ -39,6 +39,12 @@ $ADMIN->add('tools', new admin_category('tool_objectbackup', get_string('pluginn
 $settings = new admin_settingpage('tool_objectbackup_settings', get_string('pluginsettings', 'tool_objectbackup'));
 $ADMIN->add('tool_objectbackup', $settings);
 
+$ADMIN->add('reports', new admin_externalpage(
+    'tool_objectbackup_object_status',
+    get_string('object_status:page', 'tool_objectbackup'),
+    new moodle_url('/admin/tool/objectbackup/object_status.php')
+));
+
 
 if ($ADMIN->fulltree) {
 
