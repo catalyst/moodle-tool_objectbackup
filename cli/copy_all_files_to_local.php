@@ -44,6 +44,7 @@ $help = "Restore files from external object storage to local filedir using objec
 
 Options:
 --limit=INT            Maximum number of content hashes to process. Defaults to all.
+--checklocal=INT       Check local file exists before copying (1=yes, 0=no). Default 1.
 --help, -h             Print out this help.
 
 Example:
@@ -54,6 +55,7 @@ list($options, $unrecognized) = cli_get_params(
     [
         'help' => false,
         'limit' => 0,
+        'checklocal' => 1,
     ],
     [
         'h' => 'help',
@@ -73,6 +75,11 @@ if ($options['help']) {
 $limit = (int)$options['limit'];
 if ($limit < 0) {
     cli_error('--limit must be greater than or equal to 0');
+}
+
+$checklocal = (int)$options['checklocal'];
+if ($checklocal !== 0 && $checklocal !== 1) {
+    cli_error('--checklocal must be either 0 or 1');
 }
 
 $config = \tool_objectbackup\local\manager::get_objectfs_config();
@@ -118,7 +125,7 @@ foreach ($records as $record) {
     $filesize = (int)$record->filesize;
     $localpath = tool_objectbackup_local_path_from_hash($contenthash);
 
-    if (is_readable($localpath)) {
+    if ($checklocal && is_readable($localpath)) {
         $alreadylocal++;
         continue;
     }
