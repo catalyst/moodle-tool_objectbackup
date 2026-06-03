@@ -68,6 +68,12 @@ if ($ADMIN->fulltree) {
         30 * MINSECS,
         MINSECS));
 
+    $settings->add(new admin_setting_configduration('tool_objectbackup/externaldeletiondelay',
+        new lang_string('settings:externaldeletiondelay', 'tool_objectbackup'),
+        new lang_string('settings:externaldeletiondelay_help', 'tool_objectbackup'),
+        0,
+        DAYSECS));
+
     $client = \tool_objectbackup\local\manager::get_client($config);
     if ($client && $client->get_availability()) {
         $settings = $client->define_client_section($settings, $config);

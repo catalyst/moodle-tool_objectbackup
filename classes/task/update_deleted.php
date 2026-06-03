@@ -46,10 +46,13 @@ class update_deleted extends \core\task\scheduled_task {
     public function execute() {
         global $DB;
 
-        if (empty(get_config("tool_objectbackup", 'filesystem'))) {
+        $config = \tool_objectbackup\local\manager::get_objectfs_config();
+        if (empty($config->filesystem)) {
             mtrace("objectbackup not configured");
             return;
         }
+
+        $fs = new $config->filesystem();
 
         // Find all files that we have backed up that are no longer listed in files table.
         $sql = 'SELECT o.*
@@ -83,5 +86,38 @@ class update_deleted extends \core\task\scheduled_task {
             $count++;
         }
         mtrace("Found $count files that have been recently added back to Moodle and are already backed up");
+
+        // Delete objects from external storage once they pass the configured deletion delay.
+        $externaldeletiondelay = (int)$config->externaldeletiondelay;
+        if ($externaldeletiondelay <= 0) {
+            mtrace('External deletion delay is disabled; skipping external deletion pass');
+            return;
+        }
+
+        $cutoff = time() - $externaldeletiondelay;
+        $sql = 'SELECT o.*
+                  FROM {tool_objectbackup} o
+                 WHERE o.deleted IS NOT NULL
+                   AND o.deleted < :cutoff';
+
+        $objects = $DB->get_recordset_sql($sql, ['cutoff' => $cutoff]);
+        $deletedcount = 0;
+        $failedcount = 0;
+        foreach ($objects as $object) {
+            try {
+                $fs->delete_external_file_from_hash($object->contenthash, true);
+                $DB->delete_records('tool_objectbackup', ['id' => $object->id]);
+                $deletedcount++;
+            } catch (\Throwable $e) {
+                $failedcount++;
+                mtrace('Failed deleting external file for contenthash ' . $object->contenthash . ': ' . $e->getMessage());
+            }
+        }
+        $objects->close();
+
+        mtrace("Deleted $deletedcount files from external storage after deletion delay");
+        if ($failedcount > 0) {
+            mtrace("Failed deleting $failedcount files from external storage");
+        }
     }
 }

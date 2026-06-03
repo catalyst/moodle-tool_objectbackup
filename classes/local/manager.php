@@ -47,6 +47,7 @@ class manager extends \tool_objectfs\local\manager {
         $config->minimumage = 7 * DAYSECS;
         $config->deletelocal = 0;
         $config->consistencydelay = 10 * MINSECS;
+        $config->externaldeletiondelay = 0;
         $config->maxtaskruntime = MINSECS;
         $config->logging = 0;
         $config->preferexternal = 0;
