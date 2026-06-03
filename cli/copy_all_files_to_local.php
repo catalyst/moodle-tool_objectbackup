@@ -116,6 +116,12 @@ foreach ($records as $record) {
     $total++;
     $contenthash = $record->contenthash;
     $filesize = (int)$record->filesize;
+    $localpath = tool_objectbackup_local_path_from_hash($contenthash);
+
+    if (is_readable($localpath)) {
+        $alreadylocal++;
+        continue;
+    }
 
     try {
         $initiallocation = $filesystem->get_object_location_from_hash($contenthash);
