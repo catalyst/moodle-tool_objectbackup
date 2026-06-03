@@ -39,7 +39,8 @@ $PAGE->set_heading($heading);
 
 echo $OUTPUT->header();
 
-$report = $DB->get_record('tool_objectbackup_stats', [], 'id DESC', IGNORE_MULTIPLE);
+$reports = $DB->get_records('tool_objectbackup_stats', [], 'id DESC', '*', 0, 1);
+$report = reset($reports);
 if (!$report) {
     echo $OUTPUT->heading(get_string('nothingtodisplay'));
     echo $OUTPUT->footer();
