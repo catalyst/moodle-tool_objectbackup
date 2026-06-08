@@ -54,7 +54,7 @@ class push_objects_to_storage extends \core\task\scheduled_task {
         }
         $fs = new $config->filesystem();
 
-        $sql = "SELECT f.*
+        $sql = "SELECT DISTINCT f.contenthash, f.filesize, f.mimetype
                   FROM {files} f
                   LEFT JOIN {tool_objectbackup} b on b.contenthash = f.contenthash
                   WHERE b.id is null";
