@@ -28,8 +28,11 @@ require_once(__DIR__ . '/../../../../config.php');
 require_once($CFG->libdir . '/clilib.php');
 require_once($CFG->dirroot . '/admin/tool/objectbackup/locallib.php');
 
+$scriptstart = time();
+
 /**
  * Returns local filedir path for a content hash.
+ * TODO: need to move this function outside inline php.
  *
  * @param string $contenthash
  * @return string
@@ -37,7 +40,14 @@ require_once($CFG->dirroot . '/admin/tool/objectbackup/locallib.php');
 function tool_objectbackup_local_path_from_hash(string $contenthash): string {
     global $CFG;
 
-    return $CFG->dataroot . '/filedir/' . substr($contenthash, 0, 2) . '/' . substr($contenthash, 2, 2) . '/' . $contenthash;
+    $l1 = $contenthash[0] . $contenthash[1];
+    $l2 = $contenthash[2] . $contenthash[3];
+
+    if (is_file($CFG->dataroot.'/filedir/' . "$l1/$l2" . '/'. $contenthash)) {
+        return $CFG->dataroot."/filedir/$l1/$l2";
+    }
+
+    return $CFG->dataroot."/filedir/$l2";
 }
 
 $help = "Restore files from external object storage to local filedir using objectbackup configuration.
@@ -203,3 +213,5 @@ mtrace('Filesize mismatches: ' . $filesizemismatches);
 mtrace('Already local/duplicated: ' . $alreadylocal);
 mtrace('Missing or unreadable in external storage: ' . $missingexternal);
 mtrace('Errors: ' . $errors);
+
+mtrace('Total time taken: ' . format_time(time() - $scriptstart));
